@@ -3,10 +3,7 @@
 //! game process and has no gameplay endpoints (no agent select/lock).
 //! Returns `Ok(None)` when Valorant isn't running and `Err(step + status + body)` on failures.
 
-use base64::{
-    engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
-    Engine,
-};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use flate2::{read::DeflateDecoder, write::DeflateEncoder, Compression};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
@@ -262,12 +259,7 @@ impl RiotLocal {
         else {
             return Ok(None);
         };
-        let field = |k: &str| {
-            ent[k]
-                .as_str()
-                .filter(|v| !v.is_empty())
-                .map(str::to_owned)
-        };
+        let field = |k: &str| ent[k].as_str().filter(|v| !v.is_empty()).map(str::to_owned);
         let (Some(puuid), Some(access), Some(entitlements)) =
             (field("subject"), field("accessToken"), field("token"))
         else {
@@ -315,38 +307,17 @@ impl RiotLocal {
         }))
     }
 
-    /// Settings hosts to try, best guess first. The PAS token carries the account's affinity.
-    async fn settings_hosts(&self, c: &Client) -> Vec<String> {
-        let affinity = match self
-            .remote
-            .get("https://riot-geo.pas.si.riotgames.com/pas/v1/product/valorant")
-            .bearer_auth(&c.access)
-            .send()
-            .await
-        {
-            Ok(res) => res.text().await.ok().and_then(|jwt| {
-                let payload = URL_SAFE_NO_PAD
-                    .decode(jwt.trim().split('.').nth(1)?)
-                    .ok()?;
-                serde_json::from_slice::<Value>(&payload).ok()?["affinity"]
-                    .as_str()
-                    .map(str::to_lowercase)
-            }),
-            Err(_) => None,
-        };
-        let prefix = match affinity.as_deref().unwrap_or("") {
-            "eu" | "tr" => "euc1",
-            "ap" | "kr" => "apse1",
-            _ => "usw2",
-        };
-        let mut hosts = vec![
-            format!("player-preferences-{prefix}.pp.sgp.pvp.net"),
-            format!("{prefix}.pp.sgp.pvp.net"),
-        ];
-        if prefix != "usw2" {
-            hosts.push("player-preferences-usw2.pp.sgp.pvp.net".into());
-        }
-        hosts
+    /// player-preferences serves every region from each host (checked 2026-10); the rest are fallbacks.
+    fn settings_hosts() -> Vec<String> {
+        ["usw2", "euc1", "apse1"]
+            .into_iter()
+            .flat_map(|r| {
+                [
+                    format!("player-preferences-{r}.pp.sgp.pvp.net"),
+                    format!("{r}.pp.sgp.pvp.net"),
+                ]
+            })
+            .collect()
     }
 
     fn settings_req(&self, req: reqwest::RequestBuilder, c: &Client) -> reqwest::RequestBuilder {
@@ -367,17 +338,20 @@ impl RiotLocal {
         }
     }
 
-    /// Signed-in account's settings, decompressed: `{ puuid, settings }`.
-    pub async fn settings_get(&self) -> R<Option<Value>> {
-        let Some(c) = self.client().await? else {
-            return Ok(None);
-        };
+    /// The host holding the account's settings and the settings. `None` host: no settings saved
+    /// anywhere yet (every region answered PLAYER_PREFERENCE_NOT_FOUND), e.g. a new account.
+    async fn find_settings(&self, c: &Client) -> R<(Option<String>, Value)> {
         let mut errors = Vec::new();
-        for host in self.settings_hosts(&c).await {
+        let mut not_found = false;
+        for host in Self::settings_hosts() {
             let url = format!("https://{host}/playerPref/v3/getPreference/{SETTINGS_TYPE}");
-            let envelope = match self.settings_req(self.remote.get(&url), &c).send().await {
+            let envelope = match self.settings_req(self.remote.get(&url), c).send().await {
                 Ok(res) => match body(res, &host).await {
                     Ok(v) => v,
+                    Err(e) if e.contains("PLAYER_PREFERENCE_NOT_FOUND") => {
+                        not_found = true;
+                        continue;
+                    }
                     Err(e) => {
                         errors.push(e);
                         continue;
@@ -388,9 +362,8 @@ impl RiotLocal {
                     continue;
                 }
             };
-            // A fresh account has no saved settings yet.
             let Some(data) = envelope["data"].as_str().filter(|d| !d.is_empty()) else {
-                return Ok(Some(json!({ "puuid": c.puuid, "settings": {} })));
+                return Ok((Some(host), json!({})));
             };
             let packed = STANDARD
                 .decode(data)
@@ -401,17 +374,27 @@ impl RiotLocal {
                 .map_err(|e| format!("settings inflate: {e}"))?;
             let settings: Value =
                 serde_json::from_slice(&raw).map_err(|e| format!("settings JSON: {e}"))?;
-            return Ok(Some(json!({ "puuid": c.puuid, "settings": settings })));
+            return Ok((Some(host), settings));
+        }
+        // Only when every host answered: an unreachable region could hold the real settings.
+        if not_found && errors.is_empty() {
+            return Ok((None, json!({})));
         }
         Err(errors.join(" | "))
     }
 
+    /// Signed-in account's settings, decompressed: `{ puuid, settings }`.
+    pub async fn settings_get(&self) -> R<Option<Value>> {
+        let Some(c) = self.client().await? else {
+            return Ok(None);
+        };
+        let (_, settings) = self.find_settings(&c).await?;
+        Ok(Some(json!({ "puuid": c.puuid, "settings": settings })))
+    }
+
     /// Replaces the signed-in account's settings. Refuses if another account is signed in.
     pub async fn settings_put(&self, puuid: &str, settings: &Value) -> R<()> {
-        let c = self
-            .client()
-            .await?
-            .ok_or("Riot Client is not signed in")?;
+        let c = self.client().await?.ok_or("Riot Client is not signed in")?;
         if c.puuid != puuid {
             return Err("a different account is signed in".into());
         }
@@ -421,8 +404,13 @@ impl RiotLocal {
         let packed = enc.finish().map_err(|e| format!("settings deflate: {e}"))?;
         let payload = json!({ "type": SETTINGS_TYPE, "data": STANDARD.encode(packed) });
 
+        // Write where the settings already are, so they don't end up in another region.
+        let hosts = match self.find_settings(&c).await {
+            Ok((Some(host), _)) => vec![host],
+            _ => Self::settings_hosts(),
+        };
         let mut errors = Vec::new();
-        for host in self.settings_hosts(&c).await {
+        for host in hosts {
             let url = format!("https://{host}/playerPref/v3/savePreference");
             match self
                 .settings_req(self.remote.put(&url), &c)

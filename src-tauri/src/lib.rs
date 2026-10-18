@@ -1,13 +1,16 @@
 mod archive;
 mod game_settings;
 mod henrik;
+mod migrate;
 mod riot_local;
+mod startup;
 
 use archive::Archive;
 use game_settings::Store;
 use henrik::{ApiError, Henrik};
 use riot_local::{ClientStatus, LocalStatus, RiotLocal};
 use serde_json::Value;
+use startup::Prefs;
 use tauri::{Manager, State};
 
 /// Generic HenrikDev GET. Each path segment is encoded separately.
@@ -200,7 +203,13 @@ fn gs_save(store: State<'_, Store>, name: String, value: Value) -> Result<(), St
 fn gs_export(app: tauri::AppHandle, file_name: String, content: String) -> Result<String, String> {
     let safe: String = file_name
         .chars()
-        .map(|c| if c.is_alphanumeric() || "-_.#".contains(c) { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || "-_.#".contains(c) {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     let path = app
         .path()
@@ -213,6 +222,7 @@ fn gs_export(app: tauri::AppHandle, file_name: String, content: String) -> Resul
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    migrate::run();
     tauri::Builder::default()
         .setup(|app| {
             #[cfg(desktop)]
@@ -227,6 +237,10 @@ pub fn run() {
             app.manage(RiotLocal::new());
             app.manage(Archive::new(app.path().app_data_dir()?.join("archive")));
             app.manage(Store::new(app.path().app_data_dir()?.join("game-settings")));
+            app.manage(Prefs::init(
+                app.path().app_config_dir()?.join("startup.json"),
+            ));
+            startup::watch_splash(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -251,7 +265,10 @@ pub fn run() {
             gs_cloud_put,
             gs_load,
             gs_save,
-            gs_export
+            gs_export,
+            startup::autostart_get,
+            startup::autostart_set,
+            startup::startup_done
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

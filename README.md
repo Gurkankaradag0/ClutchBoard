@@ -41,11 +41,11 @@ ClutchBoard, [tracker.gg](https://tracker.gg/valorant) tarzında bir Valorant is
 
 ### Kurulum
 
-1. [Releases](https://github.com/Gurkankaradag0/ClutchBoard/releases/latest) sayfasından `ClutchBoard_x.y.z_x64-setup.exe` dosyasını indir ve çalıştır.
+1. **[ClutchBoard-Setup.exe](https://github.com/Gurkankaradag0/ClutchBoard/releases/latest/download/ClutchBoard-Setup.exe)** dosyasını indir ve çalıştır. Kurulum tek tıkla yapılır, bitince uygulama açılır.
 2. Bir **HenrikDev API anahtarı** al (ücretsiz): [HenrikDev panelini](https://api.henrikdev.xyz/dashboard/) aç, soldaki **API Keys** bölümünden **Generate New Key** formunu doldur.
 3. Uygulamada **Ayarlar → HenrikDev API anahtarı** alanına yapıştırıp kaydet.
 
-Yeni sürümler uygulama açılırken otomatik kontrol edilir; **Ayarlar → Güncelleme** üzerinden elle de bakabilirsin.
+Uygulama her açılışta önce güncellemeleri kontrol eder, varsa kurup öyle açılır; **Ayarlar → Güncelleme** üzerinden elle de bakabilirsin. Windows açılınca simge durumunda başlar; **Ayarlar → Başlangıç**'tan kapatılabilir.
 
 ### Gizlilik
 
@@ -68,7 +68,7 @@ bun run typecheck                        # tip kontrolü
 bun run format                           # Tailwind sınıf düzeltmesi + Prettier
 ```
 
-Yayın akışı (bakımcılar için): `bun run set-version patch` → `bun run release -- "sürüm notu"` → `release/` içindeki installer ile `latest.json`'u yeni bir GitHub Release'e ekle.
+Yayın akışı (bakımcılar için): `bun run set-version patch` → `bun run release -- "sürüm notu"` → `release/` içindeki üç dosyayı (`ClutchBoard-Setup.exe`, NSIS installer, `latest.json`) yeni bir GitHub Release'e ekle.
 
 **Teknolojiler:** Tauri v2 (Rust) · React 19 · TypeScript · Tailwind CSS 4 · shadcn/ui · TanStack Query · Zustand · i18next. Veri: [HenrikDev API](https://docs.henrikdev.xyz), görseller: [valorant-api.com](https://valorant-api.com).
 
@@ -99,11 +99,11 @@ ClutchBoard is a [tracker.gg](https://tracker.gg/valorant)-style Valorant stats 
 
 ### Install
 
-1. Download `ClutchBoard_x.y.z_x64-setup.exe` from [Releases](https://github.com/Gurkankaradag0/ClutchBoard/releases/latest) and run it.
+1. Download **[ClutchBoard-Setup.exe](https://github.com/Gurkankaradag0/ClutchBoard/releases/latest/download/ClutchBoard-Setup.exe)** and run it. Setup is one click and opens the app when done.
 2. Get a free **HenrikDev API key**: open the [HenrikDev dashboard](https://api.henrikdev.xyz/dashboard/), go to **API Keys** in the sidebar and fill in **Generate New Key**.
 3. Paste it into **Settings → HenrikDev API key** and save.
 
-New versions are checked automatically on startup; you can also check manually under **Settings → Updates**.
+The app checks for updates every time it starts and installs them before opening; you can also check in **Settings → Update**. It starts minimized with Windows; turn that off in **Settings → Startup**.
 
 ### Privacy
 
@@ -126,7 +126,7 @@ bun run typecheck                        # type check
 bun run format                           # Tailwind class fixes + Prettier
 ```
 
-Release flow (maintainers): `bun run set-version patch` → `bun run release -- "notes"` → attach the installer and `latest.json` from `release/` to a new GitHub Release.
+Release flow (maintainers): `bun run set-version patch` → `bun run release -- "notes"` → attach the three files in `release/` (`ClutchBoard-Setup.exe`, the NSIS installer, `latest.json`) to a new GitHub Release.
 
 **Stack:** Tauri v2 (Rust) · React 19 · TypeScript · Tailwind CSS 4 · shadcn/ui · TanStack Query · Zustand · i18next. Data: [HenrikDev API](https://docs.henrikdev.xyz), assets: [valorant-api.com](https://valorant-api.com).
 

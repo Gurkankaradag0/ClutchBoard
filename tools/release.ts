@@ -5,7 +5,7 @@
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
 
 const KEY_PATH = join(homedir(), '.tauri', 'clutchboard.key')
 
@@ -62,9 +62,30 @@ const latest = {
 }
 writeFileSync(join('release', 'latest.json'), JSON.stringify(latest, null, 4) + '\n')
 
+// One-click installer for downloads, with the NSIS installer embedded (setup/src/main.rs).
+// The NSIS installer stays the update package.
+console.log('Building the setup app...')
+const ui = await Bun.build({ entrypoints: [join('setup', 'ui', 'main.ts')], minify: true })
+if (!ui.success) {
+    console.error(ui.logs.join('\n'))
+    process.exit(1)
+}
+writeFileSync(join('setup', 'ui', 'main.js'), await ui.outputs[0]!.text())
+copyFileSync(join('docs', 'brand', 'wordmark-dark.svg'), join('setup', 'ui', 'wordmark.svg'))
+const setupBuild = Bun.spawnSync(['cargo', 'build', '--release', '--manifest-path', join('setup', 'Cargo.toml')], {
+    stdio: ['inherit', 'inherit', 'inherit'],
+    // Same target dir as the app, so shared dependencies aren't compiled twice.
+    env: { ...process.env, CB_INSTALLER: resolve(nsis, setup), CARGO_TARGET_DIR: resolve('src-tauri', 'target') }
+})
+if (setupBuild.exitCode !== 0) process.exit(setupBuild.exitCode ?? 1)
+// Fixed name, so README can link to releases/latest/download/ClutchBoard-Setup.exe.
+const setupName = 'ClutchBoard-Setup.exe'
+copyFileSync(join('src-tauri', 'target', 'release', 'clutchboard-setup.exe'), join('release', setupName))
+
 console.log(`
-release/${fileName}
+release/${setupName}   (download)
+release/${fileName}   (updates)
 release/latest.json
 New release: https://github.com/${repo}/releases/new
   Tag: ${tag}   Title: ClutchBoard ${tag}
-  Attach both files and mark it as the latest release.`)
+  Attach all three files and mark it as the latest release.`)

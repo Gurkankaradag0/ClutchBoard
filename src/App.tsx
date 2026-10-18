@@ -16,7 +16,6 @@ import MePage from '@/pages/me'
 import LivePage from '@/pages/live'
 import GameSettingsPage from '@/pages/game-settings'
 import { GameSettingsWatcher } from '@/components/game-settings/watcher'
-import { UpdateWatcher } from '@/components/update/update-watcher'
 import { indexMatchesFrom } from '@/stores/players'
 
 // TanStack v5 only listens to visibilitychange, which Alt+Tab doesn't fire on desktop.
@@ -55,7 +54,6 @@ const App = () => (
                 </Routes>
             </HashRouter>
             <Toaster position="bottom-right" />
-            <UpdateWatcher />
             <GameSettingsWatcher />
         </TooltipProvider>
     </QueryClientProvider>

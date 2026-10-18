@@ -161,7 +161,10 @@
         "cacheSize": "API önbelleği: {{cache}} · Maç arşivi: {{archive}}",
         "clearOthers": "Diğerlerini temizle ({{n}} · {{size}})",
         "clearFavorites": "Favorileri temizle ({{n}} · {{size}})",
-        "clearAll": "Tümünü temizle ({{size}})"
+        "clearAll": "Tümünü temizle ({{size}})",
+        "startup": "Başlangıç",
+        "startupHint": "Windows açıldığında simge durumunda açılır.",
+        "autostart": "Windows açılınca ClutchBoard'u başlat"
     },
     "errors": {
         "noKey": "HenrikDev API anahtarı ayarlanmamış.",

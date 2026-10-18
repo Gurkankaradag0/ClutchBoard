@@ -11,12 +11,13 @@ export default defineConfig({
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     clearScreen: false,
     // Loaded from disk, so the bundle size warning doesn't matter.
-    build: { chunkSizeWarningLimit: 1500 },
+    // splash.html is the startup window (update check before the app opens).
+    build: { chunkSizeWarningLimit: 1500, rollupOptions: { input: ['index.html', 'splash.html'] } },
     server: {
         port: 1420,
         strictPort: true,
         host: host || false,
         hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
-        watch: { ignored: ['**/src-tauri/**'] }
+        watch: { ignored: ['**/src-tauri/**', '**/setup/**'] }
     }
 })

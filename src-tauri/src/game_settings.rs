@@ -32,14 +32,10 @@ fn config_root() -> Option<PathBuf> {
 fn parse_dir(name: &str) -> Option<(String, String)> {
     let (puuid, region) = name.split_at_checked(36)?;
     let region = region.strip_prefix('-')?;
-    let ok = puuid
-        .chars()
-        .enumerate()
-        .all(|(i, c)| match i {
-            8 | 13 | 18 | 23 => c == '-',
-            _ => c.is_ascii_hexdigit(),
-        })
-        && !region.is_empty()
+    let ok = puuid.chars().enumerate().all(|(i, c)| match i {
+        8 | 13 | 18 | 23 => c == '-',
+        _ => c.is_ascii_hexdigit(),
+    }) && !region.is_empty()
         && region.chars().all(|c| c.is_ascii_alphanumeric());
     ok.then(|| (puuid.to_lowercase(), region.to_lowercase()))
 }

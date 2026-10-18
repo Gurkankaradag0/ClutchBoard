@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ClutchBoard</title>
+        <link rel="stylesheet" href="/src/styles/splash.css" />
+    </head>
+    <body data-tauri-drag-region>
+        <div class="mark" data-tauri-drag-region>
+            <svg viewBox="204 228 616 568" aria-hidden="true" data-tauri-drag-region>
+                <path d="M763.1,578.7 L646.8,579.2 L599.0,632.5 L574.3,645.1 L405.8,646.2 L240.0,787.8 L653.9,735.7Z M812.0,236.2 L434.9,236.2 L332.8,295.4 L212.0,770.3 L368.4,636.7 L436.0,371.7 L479.9,333.3 L671.5,332.8 L593.5,468.9 L767.5,347.6Z" />
+            </svg>
+        </div>
+        <p id="status" role="status" aria-live="polite" data-tauri-drag-region></p>
+        <div class="bar" aria-hidden="true"><span id="progress"></span></div>
+        <script type="module" src="/src/splash.ts"></script>
+    </body>
+</html>

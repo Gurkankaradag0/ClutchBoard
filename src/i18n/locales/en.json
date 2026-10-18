@@ -161,7 +161,10 @@
         "cacheSize": "API cache: {{cache}} · Match archive: {{archive}}",
         "clearOthers": "Clear others ({{n}} · {{size}})",
         "clearFavorites": "Clear favorites ({{n}} · {{size}})",
-        "clearAll": "Clear all ({{size}})"
+        "clearAll": "Clear all ({{size}})",
+        "startup": "Startup",
+        "startupHint": "Opens minimized when Windows starts.",
+        "autostart": "Start ClutchBoard with Windows"
     },
     "errors": {
         "noKey": "HenrikDev API key is not set.",

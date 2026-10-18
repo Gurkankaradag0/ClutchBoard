@@ -1,0 +1,22 @@
+[package]
+name = "clutchboard-setup"
+version = "0.0.0"
+description = "ClutchBoard installer"
+authors = ["Gürkan Karadağ"]
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Built with plain `cargo build`, so the embedded frontend has to be enabled here.
+tauri = { version = "2", features = ["custom-protocol"] }
+winreg = "0.55"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

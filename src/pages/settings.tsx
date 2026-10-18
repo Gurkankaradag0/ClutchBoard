@@ -39,6 +39,12 @@ const SettingsPage = () => {
     const clearSeen = useSeen((s) => s.clear)
     const version = useQuery({ queryKey: ['appVersion'], queryFn: getVersion, staleTime: Infinity })
     const upd = useUpdate()
+    const autostart = useQuery({ queryKey: ['autostart'], queryFn: () => invoke<boolean>('autostart_get') })
+    const setAutostart = useMutation({
+        mutationFn: (on: boolean) => invoke<void>('autostart_set', { on }),
+        onSuccess: () => void qc.invalidateQueries({ queryKey: ['autostart'] }),
+        onError: (e) => toast.error(String(e))
+    })
 
     const save = useMutation({
         mutationFn: () => setApiKey(key),
@@ -110,6 +116,13 @@ const SettingsPage = () => {
                         {t('update.check')}
                     </Button>
                 )}
+            </Section>
+
+            <Section title={t('settings.startup')} hint={t('settings.startupHint')}>
+                <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" className="size-4 accent-primary" checked={autostart.data ?? false} disabled={autostart.isPending || setAutostart.isPending} onChange={(e) => setAutostart.mutate(e.target.checked)} />
+                    {t('settings.autostart')}
+                </label>
             </Section>
 
             <Section title={t('settings.language')}>

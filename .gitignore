@@ -32,3 +32,8 @@ files
 memory/
 .vscode/
 graphify-out/
+
+setup/ui/main.js
+setup/ui/wordmark.svg
+setup/gen
+setup/target
