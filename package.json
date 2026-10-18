@@ -1,0 +1,53 @@
+{
+    "name": "clutchboard",
+    "private": true,
+    "version": "0.3.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "preview": "vite preview",
+        "tauri": "tauri",
+        "typecheck": "tsc --noEmit",
+        "format": "bun tools/tw-canonical.ts && prettier --write .",
+        "format:check": "bun tools/tw-canonical.ts --check && prettier --check .",
+        "set-version": "bun tools/version.ts",
+        "release": "bun tools/release.ts"
+    },
+    "dependencies": {
+        "@fontsource/barlow": "^5.3.0",
+        "@fontsource/chakra-petch": "^5.3.0",
+        "@tailwindcss/vite": "^4.3.3",
+        "@tanstack/react-query": "^5.104.1",
+        "@tauri-apps/api": "^2.12.1",
+        "@tauri-apps/plugin-process": "^2.4.0",
+        "@tauri-apps/plugin-updater": "^2.13.1",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "cn": "^0.4.0",
+        "i18next": "^26.4.2",
+        "lucide-react": "^1.51.0",
+        "radix-ui": "^1.6.7",
+        "react": "^19.3.0",
+        "react-dom": "^19.3.0",
+        "react-i18next": "^17.0.15",
+        "react-router": "^8.4.0",
+        "sonner": "^2.0.8",
+        "tailwind-merge": "^3.7.0",
+        "tailwindcss": "^4.3.3",
+        "tw-animate-css": "^1.4.0",
+        "zustand": "^5.0.15"
+    },
+    "devDependencies": {
+        "@tauri-apps/cli": "^2.12.1",
+        "@types/node": "^26.6.4",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@vitejs/plugin-react": "^6.1.1",
+        "prettier": "^3.9.9",
+        "prettier-plugin-tailwindcss": "^0.8.1",
+        "typescript": "^7.0.2",
+        "vite": "^8.3.2"
+    },
+    "repository": "https://github.com/Gurkankaradag0/ClutchBoard"
+}

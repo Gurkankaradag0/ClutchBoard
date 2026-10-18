@@ -1,0 +1,44 @@
+{
+    "$schema": "https://schema.tauri.app/config/2",
+    "productName": "ClutchBoard",
+    "version": "../package.json",
+    "identifier": "com.ezentere.valotracker",
+    "build": {
+        "beforeDevCommand": "bun run dev",
+        "devUrl": "http://localhost:1420",
+        "beforeBuildCommand": "bun run build",
+        "frontendDist": "../dist"
+    },
+    "app": {
+        "windows": [
+            {
+                "title": "ClutchBoard",
+                "width": 1280,
+                "height": 820,
+                "minWidth": 960,
+                "minHeight": 640,
+                "center": true
+            }
+        ],
+        "security": {
+            "csp": null
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": ["nsis"],
+        "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+        "createUpdaterArtifacts": true,
+        "publisher": "Gürkan Karadağ",
+        "shortDescription": "Valorant stats tracker"
+    },
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM1OUFFMkUxNDdDQ0Q1MDUKUldRRjFjeEg0ZUtheGMvSk5KL3d4MW4xZ3I0ZGtnWDBtdUhmR3NzUis5NkpuOWE5SWNqa2RxcGQK",
+            "endpoints": ["https://github.com/Gurkankaradag0/ClutchBoard/releases/latest/download/latest.json"],
+            "windows": {
+                "installMode": "passive"
+            }
+        }
+    }
+}

@@ -1,0 +1,11 @@
+dist
+node_modules
+public
+bun.lock
+tools
+src-tauri/target
+src-tauri/gen
+memory
+*.md
+!README.md
+release
