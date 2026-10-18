@@ -49,6 +49,13 @@ export const useTiers = () => {
     })
 }
 
+export type AgentInfo = { uuid: string; displayName: string; developerName: string; displayIcon: string }
+
+export const useAgents = () => {
+    const { i18n } = useTranslation()
+    return useQuery({ queryKey: ['va', 'agents', i18n.language], queryFn: () => getJson<AgentInfo[]>('/agents?isPlayableCharacter=true', i18n.language), ...STATIC })
+}
+
 export const useTitle = (id: string | undefined) => {
     const { i18n } = useTranslation()
     return useQuery({ queryKey: ['va', 'title', id, i18n.language], queryFn: () => getJson<{ titleText: string | null }>(`/playertitles/${id}`, i18n.language), enabled: !!id, ...STATIC })

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useNavigationType } from 'react-router'
-import { ArrowLeft, Crosshair, Search, Settings, UserRound } from 'lucide-react'
+import { ArrowLeft, Crosshair, Search, Settings, SlidersHorizontal, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { RiotIdSearch } from '@/components/search/riot-id-search'
@@ -109,6 +109,7 @@ export const Shell = () => {
                 {extraNav.map((n) => (
                     <RailLink key={n.to} {...n} />
                 ))}
+                <RailLink to="/game-settings" label={t('nav.gameSettings')} icon={<SlidersHorizontal className="size-5" />} />
                 <div className="mt-auto">
                     <RailLink to="/settings" label={t('nav.settings')} icon={<Settings className="size-5" />} />
                 </div>

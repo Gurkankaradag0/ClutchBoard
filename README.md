@@ -34,7 +34,9 @@ ClutchBoard, [tracker.gg](https://tracker.gg/valorant) tarzında bir Valorant is
 - **Riot Performans Puanı** — yama 13.06 ile ACS'nin yerini alan 0–500 puan ve notu (Geçer / İyi / Üstün / Ustaca); eski maçlarda ACS.
 - **Oyuncular** — karşılaştığın herkes, "birlikte / maç" sayısıyla (örn. 5/7); tıklayınca o oyuncuyla oynadığın maçlar açılır.
 - **Arama** — son aramalar ve favoriler, açtığın maçlardaki oyunculardan oluşan otomatik tamamlama.
-- **Valorant açıkken** _(salt okuma)_ — **Hesabım**: kuşandığın skinler, kart, seviye ve sprey çarkı, oyun içi satın alma menüsü düzeninde. **Canlı Maç**: maçtaki oyuncuların rank'ı, partileri ve skinleri.
+- **Valorant açıkken** — **Hesabım**: kuşandığın skinler, kart, seviye ve sprey çarkı, oyun içi satın alma menüsü düzeninde. **Canlı Maç**: maçtaki oyuncuların rank'ı, partileri ve skinleri.
+- **Oyun Ayarları** — bu bilgisayarda giriş yapılmış tüm Valorant hesaplarının ayarları tek yerde: nişangah, tuş atamaları (ajana özel profiller dahil), fare, ses ve görüntü. Hesaplar arasında kopyala, ön ayar olarak kaydet, JSON dışa / içe aktar; varsayılan ön ayar bir sonraki giriş yapan hesaba otomatik uygulanır.
+- **Nişangah editörü** — canlı önizleme, renk seçici, dış çizgi rengi (glow), nişangah kodunu kopyala veya koddan ekle. Mevcut profiller bozulmaz; yeni nişangah boş bir yere eklenip seçilir.
 - **Türkçe / İngilizce**, uygulama içi otomatik güncelleme.
 
 ### Kurulum
@@ -52,7 +54,7 @@ Yeni sürümler uygulama açılırken otomatik kontrol edilir; **Ayarlar → Gü
 
 ### Yerel Riot Client özellikleri hakkında
 
-"Hesabım" ve "Canlı Maç", Riot Client'ın bilgisayarındaki yerel arayüzünü **yalnızca okur** (Riot Client'ın kendi kullandığı uçlar). Oyunun belleğine dokunulmaz, hiçbir şey yazılmaz veya otomatikleştirilmez (ajan seçme/kilitleme yok). Gizli isimli oyuncuların adı yalnızca sen istersen, tek tek sorgulanır. Bu özellikleri kullanmak senin sorumluluğundadır.
+"Hesabım" ve "Canlı Maç", Riot Client'ın bilgisayarındaki yerel arayüzünü **yalnızca okur** (Riot Client'ın kendi kullandığı uçlar). **Oyun Ayarları** tek istisnadır: yalnız Riot Client'a giriş yapılı hesabın kendi ayarlarını, oyunun ayar menüsünün kullandığı servise yazar ve her değişiklikten önce yedek alır; diğer hesapların görüntü ayarları kendi yerel dosyalarına yazılır. Oyunun belleğine dokunulmaz, oyun içi hiçbir şey otomatikleştirilmez (ajan seçme/kilitleme yok). Gizli isimli oyuncuların adı yalnızca sen istersen, tek tek sorgulanır. Bu özellikleri kullanmak senin sorumluluğundadır.
 
 ### Kaynaktan derleme
 
@@ -90,7 +92,9 @@ ClutchBoard is a [tracker.gg](https://tracker.gg/valorant)-style Valorant stats 
 - **Riot Performance Score** — the 0–500 score and grade (Pass / Merit / Distinction / Masterful) that replaced ACS in patch 13.06; ACS for older matches.
 - **Players** — everyone you've shared a match with, shown as "together / matches" (e.g. 5/7); click to open those matches.
 - **Search** — recent searches, favorites, and autocomplete built from players in matches you've opened.
-- **While Valorant is running** _(read-only)_ — **My Account**: your equipped skins, card, level and spray wheel in an in-game buy-menu layout. **Live Match**: ranks, parties and skins of the players in your match.
+- **While Valorant is running** — **My Account**: your equipped skins, card, level and spray wheel in an in-game buy-menu layout. **Live Match**: ranks, parties and skins of the players in your match.
+- **Game Settings** — settings of every Valorant account that has signed in on this PC in one place: crosshair, keybinds (including agent profiles), mouse, audio and video. Copy them between accounts, save presets, export / import JSON; a default preset is applied automatically to the next account that signs in.
+- **Crosshair editor** — live preview, color picker, outline color (glow), copy a crosshair code or add one. Existing profiles are kept; a new crosshair goes into a free slot and is selected.
 - **Turkish / English**, built-in auto-update.
 
 ### Install
@@ -108,7 +112,7 @@ New versions are checked automatically on startup; you can also check manually u
 
 ### About the local Riot Client features
 
-"My Account" and "Live Match" **only read** the Riot Client's local interface on your machine (the same endpoints the Riot Client itself uses). The game's memory is never touched, and nothing is written or automated (no agent select/lock). Hidden players' names are only looked up when you ask, one at a time. Use these features at your own discretion.
+"My Account" and "Live Match" **only read** the Riot Client's local interface on your machine (the same endpoints the Riot Client itself uses). **Game Settings** is the one exception: it writes only the signed-in account's own settings, to the same service the in-game settings menu uses, and takes a backup before every change; other accounts' video settings go to their own local files. The game's memory is never touched and nothing in game is automated (no agent select/lock). Hidden players' names are only looked up when you ask, one at a time. Use these features at your own discretion.
 
 ### Build from source
 

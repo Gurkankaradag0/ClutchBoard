@@ -14,6 +14,8 @@ import MatchPage from '@/pages/match'
 import SettingsPage from '@/pages/settings'
 import MePage from '@/pages/me'
 import LivePage from '@/pages/live'
+import GameSettingsPage from '@/pages/game-settings'
+import { GameSettingsWatcher } from '@/components/game-settings/watcher'
 import { UpdateWatcher } from '@/components/update/update-watcher'
 import { indexMatchesFrom } from '@/stores/players'
 
@@ -48,11 +50,13 @@ const App = () => (
                         <Route path="settings" element={<SettingsPage />} />
                         <Route path="me" element={<MePage />} />
                         <Route path="live" element={<LivePage />} />
+                        <Route path="game-settings" element={<GameSettingsPage />} />
                     </Route>
                 </Routes>
             </HashRouter>
             <Toaster position="bottom-right" />
             <UpdateWatcher />
+            <GameSettingsWatcher />
         </TooltipProvider>
     </QueryClientProvider>
 )

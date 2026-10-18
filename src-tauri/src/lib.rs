@@ -1,10 +1,12 @@
 mod archive;
+mod game_settings;
 mod henrik;
 mod riot_local;
 
 use archive::Archive;
+use game_settings::Store;
 use henrik::{ApiError, Henrik};
-use riot_local::{LocalStatus, RiotLocal};
+use riot_local::{ClientStatus, LocalStatus, RiotLocal};
 use serde_json::Value;
 use tauri::{Manager, State};
 
@@ -118,6 +120,97 @@ async fn local_name(state: State<'_, RiotLocal>, puuid: String) -> Result<Option
     state.name(&puuid).await
 }
 
+// ---- Game settings: per-account config folders, signed-in account's cloud settings ----
+
+#[tauri::command]
+fn gs_accounts() -> Vec<game_settings::Account> {
+    game_settings::accounts()
+}
+
+#[tauri::command]
+fn gs_local_read(dir: String) -> Result<game_settings::LocalFiles, String> {
+    game_settings::read_local(&dir)
+}
+
+/// Refused while Valorant runs on that account: the game rewrites these files on exit.
+#[tauri::command]
+async fn gs_local_write(
+    riot: State<'_, RiotLocal>,
+    dir: String,
+    ini: Option<String>,
+    gus: Option<String>,
+) -> Result<(), String> {
+    if let Some(c) = riot.client_status().await? {
+        if c.game_running && dir.to_lowercase().starts_with(&c.puuid) {
+            return Err("game running".into());
+        }
+    }
+    game_settings::write_local(&dir, ini, gus)
+}
+
+/// Deletes the account's config folder and the app's snapshot and backups for it.
+#[tauri::command]
+async fn gs_delete_account(
+    riot: State<'_, RiotLocal>,
+    store: State<'_, Store>,
+    dir: String,
+    puuid: String,
+) -> Result<(), String> {
+    if let Some(c) = riot.client_status().await? {
+        if c.game_running && c.puuid == puuid {
+            return Err("game running".into());
+        }
+    }
+    game_settings::delete_account(&dir)?;
+    store.delete(&format!("snap-{puuid}"))?;
+    store.delete(&format!("backup-{puuid}"))
+}
+
+#[tauri::command]
+async fn gs_client(riot: State<'_, RiotLocal>) -> Result<Option<ClientStatus>, String> {
+    riot.client_status().await
+}
+
+#[tauri::command]
+async fn gs_cloud_get(riot: State<'_, RiotLocal>) -> Result<Option<Value>, String> {
+    riot.settings_get().await
+}
+
+#[tauri::command]
+async fn gs_cloud_put(
+    riot: State<'_, RiotLocal>,
+    puuid: String,
+    settings: Value,
+) -> Result<(), String> {
+    riot.settings_put(&puuid, &settings).await
+}
+
+#[tauri::command]
+fn gs_load(store: State<'_, Store>, name: String) -> Result<Value, String> {
+    store.load(&name)
+}
+
+#[tauri::command]
+fn gs_save(store: State<'_, Store>, name: String, value: Value) -> Result<(), String> {
+    store.save(&name, &value)
+}
+
+/// Saves an export into the Downloads folder and returns its path.
+#[tauri::command]
+fn gs_export(app: tauri::AppHandle, file_name: String, content: String) -> Result<String, String> {
+    let safe: String = file_name
+        .chars()
+        .map(|c| if c.is_alphanumeric() || "-_.#".contains(c) { c } else { '_' })
+        .collect();
+    let path = app
+        .path()
+        .download_dir()
+        .map_err(|e| e.to_string())?
+        .join(safe);
+    std::fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -133,6 +226,7 @@ pub fn run() {
             app.manage(Henrik::new(cache, config));
             app.manage(RiotLocal::new());
             app.manage(Archive::new(app.path().app_data_dir()?.join("archive")));
+            app.manage(Store::new(app.path().app_data_dir()?.join("game-settings")));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -147,7 +241,17 @@ pub fn run() {
             archive_load,
             archive_save,
             forget_players,
-            storage_usage
+            storage_usage,
+            gs_accounts,
+            gs_local_read,
+            gs_local_write,
+            gs_delete_account,
+            gs_client,
+            gs_cloud_get,
+            gs_cloud_put,
+            gs_load,
+            gs_save,
+            gs_export
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

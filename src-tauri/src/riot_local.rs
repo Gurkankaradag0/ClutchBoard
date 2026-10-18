@@ -1,10 +1,16 @@
-//! Read-only bridge to the local Riot Client: lockfile -> local entitlements -> pd/glz endpoints.
-//! Never touches the game process and exposes no write endpoints (no agent select/lock).
+//! Bridge to the local Riot Client: lockfile -> local entitlements -> pd/glz endpoints.
+//! Read-only except the signed-in player's own settings (player-preferences). Never touches the
+//! game process and has no gameplay endpoints (no agent select/lock).
 //! Returns `Ok(None)` when Valorant isn't running and `Err(step + status + body)` on failures.
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{
+    engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD},
+    Engine,
+};
+use flate2::{read::DeflateDecoder, write::DeflateEncoder, Compression};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -29,6 +35,26 @@ struct Session {
     shard: String,
     version: String,
 }
+
+/// Signed-in Riot Client account; Valorant may or may not be running.
+struct Client {
+    port: String,
+    basic: String,
+    puuid: String,
+    access: String,
+    entitlements: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientStatus {
+    pub puuid: String,
+    name: Option<String>,
+    tag: Option<String>,
+    pub game_running: bool,
+}
+
+const SETTINGS_TYPE: &str = "Ares.PlayerSettings";
 
 #[derive(Serialize)]
 pub struct LocalStatus {
@@ -222,6 +248,201 @@ impl RiotLocal {
             .await
             .map_err(|e| format!("{what}: {e}"))?;
         body(res, &what).await
+    }
+
+    /// Signed-in account without requiring Valorant. `Ok(None)` when the client is closed or signed out.
+    async fn client(&self) -> R<Option<Client>> {
+        let Some((port, password)) = read_lockfile() else {
+            return Ok(None);
+        };
+        let basic = format!("Basic {}", STANDARD.encode(format!("riot:{password}")));
+        let Ok(ent) = self
+            .local_get(&port, &basic, "/entitlements/v1/token")
+            .await
+        else {
+            return Ok(None);
+        };
+        let field = |k: &str| {
+            ent[k]
+                .as_str()
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned)
+        };
+        let (Some(puuid), Some(access), Some(entitlements)) =
+            (field("subject"), field("accessToken"), field("token"))
+        else {
+            return Ok(None);
+        };
+        Ok(Some(Client {
+            port,
+            basic,
+            puuid,
+            access,
+            entitlements,
+        }))
+    }
+
+    async fn game_running(&self, c: &Client) -> bool {
+        self.local_get(&c.port, &c.basic, "/product-session/v1/external-sessions")
+            .await
+            .ok()
+            .and_then(|s| {
+                s.as_object()
+                    .map(|o| o.values().any(|v| v["productId"] == "valorant"))
+            })
+            .unwrap_or(false)
+    }
+
+    pub async fn client_status(&self) -> R<Option<ClientStatus>> {
+        let Some(c) = self.client().await? else {
+            return Ok(None);
+        };
+        let chat = self
+            .local_get(&c.port, &c.basic, "/chat/v1/session")
+            .await
+            .unwrap_or(Value::Null);
+        let text = |k: &str| {
+            chat[k]
+                .as_str()
+                .filter(|v| !v.is_empty())
+                .map(str::to_owned)
+        };
+        Ok(Some(ClientStatus {
+            name: text("game_name"),
+            tag: text("game_tag"),
+            game_running: self.game_running(&c).await,
+            puuid: c.puuid,
+        }))
+    }
+
+    /// Settings hosts to try, best guess first. The PAS token carries the account's affinity.
+    async fn settings_hosts(&self, c: &Client) -> Vec<String> {
+        let affinity = match self
+            .remote
+            .get("https://riot-geo.pas.si.riotgames.com/pas/v1/product/valorant")
+            .bearer_auth(&c.access)
+            .send()
+            .await
+        {
+            Ok(res) => res.text().await.ok().and_then(|jwt| {
+                let payload = URL_SAFE_NO_PAD
+                    .decode(jwt.trim().split('.').nth(1)?)
+                    .ok()?;
+                serde_json::from_slice::<Value>(&payload).ok()?["affinity"]
+                    .as_str()
+                    .map(str::to_lowercase)
+            }),
+            Err(_) => None,
+        };
+        let prefix = match affinity.as_deref().unwrap_or("") {
+            "eu" | "tr" => "euc1",
+            "ap" | "kr" => "apse1",
+            _ => "usw2",
+        };
+        let mut hosts = vec![
+            format!("player-preferences-{prefix}.pp.sgp.pvp.net"),
+            format!("{prefix}.pp.sgp.pvp.net"),
+        ];
+        if prefix != "usw2" {
+            hosts.push("player-preferences-usw2.pp.sgp.pvp.net".into());
+        }
+        hosts
+    }
+
+    fn settings_req(&self, req: reqwest::RequestBuilder, c: &Client) -> reqwest::RequestBuilder {
+        let req = req
+            .bearer_auth(&c.access)
+            .header("X-Riot-Entitlements-JWT", &c.entitlements)
+            .header("X-Riot-ClientPlatform", PLATFORM)
+            .header(
+                "User-Agent",
+                "ShooterGame/13 Windows/10.0.19042.1.256.64bit",
+            );
+        match shooter_log()
+            .as_deref()
+            .and_then(|l| after(l, "CI server version: "))
+        {
+            Some(v) => req.header("X-Riot-ClientVersion", v),
+            None => req,
+        }
+    }
+
+    /// Signed-in account's settings, decompressed: `{ puuid, settings }`.
+    pub async fn settings_get(&self) -> R<Option<Value>> {
+        let Some(c) = self.client().await? else {
+            return Ok(None);
+        };
+        let mut errors = Vec::new();
+        for host in self.settings_hosts(&c).await {
+            let url = format!("https://{host}/playerPref/v3/getPreference/{SETTINGS_TYPE}");
+            let envelope = match self.settings_req(self.remote.get(&url), &c).send().await {
+                Ok(res) => match body(res, &host).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                },
+                Err(e) => {
+                    errors.push(format!("{host}: {e}"));
+                    continue;
+                }
+            };
+            // A fresh account has no saved settings yet.
+            let Some(data) = envelope["data"].as_str().filter(|d| !d.is_empty()) else {
+                return Ok(Some(json!({ "puuid": c.puuid, "settings": {} })));
+            };
+            let packed = STANDARD
+                .decode(data)
+                .map_err(|e| format!("settings base64: {e}"))?;
+            let mut raw = Vec::new();
+            DeflateDecoder::new(&packed[..])
+                .read_to_end(&mut raw)
+                .map_err(|e| format!("settings inflate: {e}"))?;
+            let settings: Value =
+                serde_json::from_slice(&raw).map_err(|e| format!("settings JSON: {e}"))?;
+            return Ok(Some(json!({ "puuid": c.puuid, "settings": settings })));
+        }
+        Err(errors.join(" | "))
+    }
+
+    /// Replaces the signed-in account's settings. Refuses if another account is signed in.
+    pub async fn settings_put(&self, puuid: &str, settings: &Value) -> R<()> {
+        let c = self
+            .client()
+            .await?
+            .ok_or("Riot Client is not signed in")?;
+        if c.puuid != puuid {
+            return Err("a different account is signed in".into());
+        }
+        let mut enc = DeflateEncoder::new(Vec::new(), Compression::default());
+        enc.write_all(&serde_json::to_vec(settings).map_err(|e| e.to_string())?)
+            .map_err(|e| format!("settings deflate: {e}"))?;
+        let packed = enc.finish().map_err(|e| format!("settings deflate: {e}"))?;
+        let payload = json!({ "type": SETTINGS_TYPE, "data": STANDARD.encode(packed) });
+
+        let mut errors = Vec::new();
+        for host in self.settings_hosts(&c).await {
+            let url = format!("https://{host}/playerPref/v3/savePreference");
+            match self
+                .settings_req(self.remote.put(&url), &c)
+                .json(&payload)
+                .send()
+                .await
+            {
+                Ok(res) if res.status().is_success() => return Ok(()),
+                Ok(res) => {
+                    let status = res.status().as_u16();
+                    let text = res.text().await.unwrap_or_default();
+                    errors.push(format!(
+                        "{host} → HTTP {status}: {}",
+                        text.chars().take(200).collect::<String>()
+                    ));
+                }
+                Err(e) => errors.push(format!("{host}: {e}")),
+            }
+        }
+        Err(errors.join(" | "))
     }
 
     pub async fn status(&self) -> R<Option<LocalStatus>> {

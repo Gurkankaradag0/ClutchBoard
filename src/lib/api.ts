@@ -163,6 +163,7 @@ export const MODES = ['', 'competitive', 'unrated', 'swiftplay', 'spikerush', 'd
 export type Mode = (typeof MODES)[number]
 
 export const fetchAccount = async (name: string, tag: string, fresh = false) => (await henrik<Account>(['v2', 'account', name, tag], { ttl: 3600, fresh })).data
+export const fetchAccountByPuuid = async (puuid: string) => (await henrik<Account>(['v2', 'by-puuid', 'account', puuid], { ttl: 7 * 86400 })).data
 export const fetchMmr = async (region: string, puuid: string, fresh = false) => (await henrik<Mmr>(['v3', 'by-puuid', 'mmr', region, PLATFORM, puuid], { ttl: 300, fresh })).data
 export const fetchMatches = async (region: string, puuid: string, mode: Mode, start: number, fresh = false) =>
     (await henrik<Match[]>(['v4', 'by-puuid', 'matches', region, PLATFORM, puuid], { query: { mode, size: PAGE_SIZE, start }, ttl: start === 0 ? 120 : 1800, fresh: fresh && start === 0 })).data ?? []
