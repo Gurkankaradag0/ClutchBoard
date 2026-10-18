@@ -163,8 +163,10 @@
         "clearFavorites": "Clear favorites ({{n}} · {{size}})",
         "clearAll": "Clear all ({{size}})",
         "startup": "Startup",
-        "startupHint": "Opens minimized when Windows starts.",
-        "autostart": "Start ClutchBoard with Windows"
+        "autostart": "Start ClutchBoard with Windows",
+        "autostartHint": "Starts in the background when you sign in to Windows.",
+        "closeToTray": "Close button minimizes to the tray",
+        "closeToTrayHint": "ClutchBoard keeps running next to the clock; quit it from the tray icon. Off: closing the window quits."
     },
     "errors": {
         "noKey": "HenrikDev API key is not set.",
@@ -459,5 +461,9 @@
             "count_one": "{{count}} setting",
             "count_other": "{{count}} settings"
         }
+    },
+    "tray": {
+        "open": "Open ClutchBoard",
+        "quit": "Quit"
     }
 }

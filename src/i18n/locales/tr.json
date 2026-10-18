@@ -163,8 +163,10 @@
         "clearFavorites": "Favorileri temizle ({{n}} · {{size}})",
         "clearAll": "Tümünü temizle ({{size}})",
         "startup": "Başlangıç",
-        "startupHint": "Windows açıldığında simge durumunda açılır.",
-        "autostart": "Windows açılınca ClutchBoard'u başlat"
+        "autostart": "Windows açılınca ClutchBoard'u başlat",
+        "autostartHint": "Windows'a giriş yapınca arka planda başlar.",
+        "closeToTray": "Kapat düğmesi sistem tepsisine küçültsün",
+        "closeToTrayHint": "ClutchBoard saatin yanındaki simgede çalışmaya devam eder; çıkmak için simgeye sağ tıkla. Kapalıysa pencereyi kapatmak uygulamadan çıkar."
     },
     "errors": {
         "noKey": "HenrikDev API anahtarı ayarlanmamış.",
@@ -459,5 +461,9 @@
             "count_one": "{{count}} ayar",
             "count_other": "{{count}} ayar"
         }
+    },
+    "tray": {
+        "open": "ClutchBoard'u aç",
+        "quit": "Çıkış"
     }
 }

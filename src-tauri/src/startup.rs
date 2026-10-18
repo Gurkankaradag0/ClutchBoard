@@ -1,20 +1,21 @@
-//! Start with Windows (HKCU Run, the value name the uninstaller removes) and the startup flow:
-//! the splash window checks for updates, then shows the main window.
+//! Window lifecycle: start with Windows (HKCU Run, the value name the uninstaller removes), the
+//! splash that checks for updates before the main window shows, and the tray icon the close
+//! button can minimize to.
 
-use serde_json::json;
+use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::time::Duration;
-use tauri::{AppHandle, Manager};
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Manager, Window, WindowEvent, Wry};
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const RUN_NAME: &str = "ClutchBoard";
-/// Passed by the Run entry; the window then starts minimized.
+/// Passed by the Run entry.
 const LOGIN_ARG: &str = "--autostart";
 /// Shows the main window anyway if the splash never reports back.
 const SPLASH_TIMEOUT: Duration = Duration::from_secs(60);
-
-pub struct Prefs(PathBuf);
 
 fn launched_at_login() -> bool {
     std::env::args().any(|a| a == LOGIN_ARG)
@@ -40,56 +41,78 @@ fn set_run(on: bool) -> Result<(), String> {
     }
 }
 
+/// `startup.json`: `autostart` and `closeToTray`, both on by default (like Discord).
+pub struct Prefs(PathBuf);
+
 impl Prefs {
-    /// On by default. The entry is rewritten each start so it follows the install folder.
+    /// The Run entry is rewritten each start so it follows the install folder.
     pub fn init(path: PathBuf) -> Self {
         let prefs = Self(path);
-        let on = prefs.autostart();
         if !prefs.0.exists() {
-            let _ = prefs.save(on);
+            let _ = prefs.write(&json!({ "autostart": true, "closeToTray": true }));
         }
-        let _ = set_run(on);
+        let _ = set_run(prefs.get("autostart"));
         prefs
     }
 
-    fn autostart(&self) -> bool {
+    fn read(&self) -> Value {
         std::fs::read(&self.0)
             .ok()
-            .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
-            .and_then(|v| v["autostart"].as_bool())
-            .unwrap_or(true)
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_else(|| json!({}))
     }
 
-    fn save(&self, on: bool) -> Result<(), String> {
+    fn get(&self, name: &str) -> bool {
+        self.read()[name].as_bool().unwrap_or(true)
+    }
+
+    fn write(&self, v: &Value) -> Result<(), String> {
         if let Some(dir) = self.0.parent() {
             std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
         }
-        std::fs::write(&self.0, json!({ "autostart": on }).to_string()).map_err(|e| e.to_string())
+        std::fs::write(&self.0, v.to_string()).map_err(|e| e.to_string())
     }
 }
 
 #[tauri::command]
-pub fn autostart_get(prefs: tauri::State<'_, Prefs>) -> bool {
-    prefs.autostart()
+pub fn prefs_get(prefs: tauri::State<'_, Prefs>) -> Value {
+    json!({ "autostart": prefs.get("autostart"), "closeToTray": prefs.get("closeToTray") })
 }
 
 #[tauri::command]
-pub fn autostart_set(prefs: tauri::State<'_, Prefs>, on: bool) -> Result<(), String> {
-    set_run(on)?;
-    prefs.save(on)
+pub fn prefs_set(prefs: tauri::State<'_, Prefs>, name: String, on: bool) -> Result<(), String> {
+    match name.as_str() {
+        "autostart" => set_run(on)?,
+        "closeToTray" => {}
+        _ => return Err("unknown preference".into()),
+    }
+    let mut v = prefs.read();
+    v[name] = json!(on);
+    prefs.write(&v)
+}
+
+/// Brings the main window up from the tray, the taskbar or behind other windows.
+pub fn reveal(app: &AppHandle) {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.show();
+        let _ = main.unminimize();
+        let _ = main.set_focus();
+    }
 }
 
 fn show_main(app: &AppHandle) {
-    if let Some(main) = app.get_webview_window("main") {
-        let _ = main.show();
-        if launched_at_login() {
-            let _ = main.minimize();
-        } else {
-            let _ = main.set_focus();
-        }
-    }
     if let Some(splash) = app.get_webview_window("splash") {
         let _ = splash.close();
+    }
+    if !launched_at_login() {
+        return reveal(app);
+    }
+    // At login: stay in the tray, or sit minimized on the taskbar.
+    if !app.state::<Prefs>().get("closeToTray") {
+        if let Some(main) = app.get_webview_window("main") {
+            let _ = main.show();
+            let _ = main.minimize();
+        }
     }
 }
 
@@ -103,11 +126,59 @@ pub fn watch_splash(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(SPLASH_TIMEOUT);
-        let hidden = app
-            .get_webview_window("main")
-            .is_some_and(|m| !m.is_visible().unwrap_or(true));
-        if hidden {
+        if app.get_webview_window("splash").is_some() {
             show_main(&app);
         }
     });
+}
+
+/// The close button hides the main window when closing to the tray is on.
+pub fn on_window_event(window: &Window, event: &WindowEvent) {
+    if let WindowEvent::CloseRequested { api, .. } = event {
+        if window.label() == "main" && window.state::<Prefs>().get("closeToTray") {
+            api.prevent_close();
+            let _ = window.hide();
+        }
+    }
+}
+
+/// Tray menu items, relabeled by the frontend when the language changes.
+pub struct TrayMenu {
+    open: MenuItem<Wry>,
+    quit: MenuItem<Wry>,
+}
+
+pub fn create_tray(app: &AppHandle) -> tauri::Result<TrayMenu> {
+    let open = MenuItem::with_id(app, "open", "Open ClutchBoard", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let mut tray = TrayIconBuilder::with_id("main")
+        .tooltip("ClutchBoard")
+        .menu(&Menu::with_items(app, &[&open, &quit])?)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, e| match e.id.as_ref() {
+            "open" => reveal(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, e| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = e
+            {
+                reveal(tray.app_handle());
+            }
+        });
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(TrayMenu { open, quit })
+}
+
+#[tauri::command]
+pub fn tray_labels(menu: tauri::State<'_, TrayMenu>, open: String, quit: String) {
+    let _ = menu.open.set_text(open);
+    let _ = menu.quit.set_text(quit);
 }

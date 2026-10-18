@@ -26,6 +26,8 @@ const Section = ({ title, hint, children }: { title: string; hint?: string; chil
 
 const formatBytes = (n: number) => (n === 0 ? '0 KB' : n < 1024 * 1024 ? `${Math.max(0.1, n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`)
 
+type Prefs = { autostart: boolean; closeToTray: boolean }
+
 const LANG_NAMES: Record<string, string> = { tr: 'Türkçe', en: 'English' }
 
 const SettingsPage = () => {
@@ -39,10 +41,10 @@ const SettingsPage = () => {
     const clearSeen = useSeen((s) => s.clear)
     const version = useQuery({ queryKey: ['appVersion'], queryFn: getVersion, staleTime: Infinity })
     const upd = useUpdate()
-    const autostart = useQuery({ queryKey: ['autostart'], queryFn: () => invoke<boolean>('autostart_get') })
-    const setAutostart = useMutation({
-        mutationFn: (on: boolean) => invoke<void>('autostart_set', { on }),
-        onSuccess: () => void qc.invalidateQueries({ queryKey: ['autostart'] }),
+    const prefs = useQuery({ queryKey: ['prefs'], queryFn: () => invoke<Prefs>('prefs_get') })
+    const setPref = useMutation({
+        mutationFn: ({ name, on }: { name: keyof Prefs; on: boolean }) => invoke<void>('prefs_set', { name, on }),
+        onSuccess: () => void qc.invalidateQueries({ queryKey: ['prefs'] }),
         onError: (e) => toast.error(String(e))
     })
 
@@ -118,11 +120,16 @@ const SettingsPage = () => {
                 )}
             </Section>
 
-            <Section title={t('settings.startup')} hint={t('settings.startupHint')}>
-                <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" className="size-4 accent-primary" checked={autostart.data ?? false} disabled={autostart.isPending || setAutostart.isPending} onChange={(e) => setAutostart.mutate(e.target.checked)} />
-                    {t('settings.autostart')}
-                </label>
+            <Section title={t('settings.startup')}>
+                {(['autostart', 'closeToTray'] as const).map((name) => (
+                    <label key={name} className="flex items-start gap-2 text-sm">
+                        <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={prefs.data?.[name] ?? false} disabled={prefs.isPending || setPref.isPending} onChange={(e) => setPref.mutate({ name, on: e.target.checked })} />
+                        <span>
+                            {t(`settings.${name}`)}
+                            <span className="block text-xs text-muted-foreground">{t(`settings.${name}Hint`)}</span>
+                        </span>
+                    </label>
+                ))}
             </Section>
 
             <Section title={t('settings.language')}>

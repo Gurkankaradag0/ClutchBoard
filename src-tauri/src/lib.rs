@@ -224,6 +224,11 @@ fn gs_export(app: tauri::AppHandle, file_name: String, content: String) -> Resul
 pub fn run() {
     migrate::run();
     tauri::Builder::default()
+        // First plugin: a second launch (e.g. from the Start menu while in the tray) focuses this one.
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            startup::reveal(app)
+        }))
+        .on_window_event(startup::on_window_event)
         .setup(|app| {
             #[cfg(desktop)]
             {
@@ -240,6 +245,7 @@ pub fn run() {
             app.manage(Prefs::init(
                 app.path().app_config_dir()?.join("startup.json"),
             ));
+            app.manage(startup::create_tray(app.handle())?);
             startup::watch_splash(app.handle());
             Ok(())
         })
@@ -266,8 +272,9 @@ pub fn run() {
             gs_load,
             gs_save,
             gs_export,
-            startup::autostart_get,
-            startup::autostart_set,
+            startup::prefs_get,
+            startup::prefs_set,
+            startup::tray_labels,
             startup::startup_done
         ])
         .run(tauri::generate_context!())

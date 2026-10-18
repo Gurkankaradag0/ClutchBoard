@@ -1,6 +1,6 @@
 [package]
 name = "clutchboard"
-version = "0.5.0"
+version = "0.5.1"
 description = "Valorant stats desktop app"
 authors = ["Gürkan Karadağ"]
 edition = "2021"
@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.13.5", features = ["gzip", "json"] }
@@ -39,3 +39,4 @@ strip = true
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-process = "2.4.0"
 tauri-plugin-updater = "2.13.1"
+tauri-plugin-single-instance = "2"

@@ -16,7 +16,10 @@ import MePage from '@/pages/me'
 import LivePage from '@/pages/live'
 import GameSettingsPage from '@/pages/game-settings'
 import { GameSettingsWatcher } from '@/components/game-settings/watcher'
+import { UpdateNotifier } from '@/components/update/update-notifier'
 import { indexMatchesFrom } from '@/stores/players'
+import { invoke } from '@tauri-apps/api/core'
+import i18n from '@/i18n'
 
 // TanStack v5 only listens to visibilitychange, which Alt+Tab doesn't fire on desktop.
 focusManager.setEventListener((handleFocus) => {
@@ -31,6 +34,11 @@ focusManager.setEventListener((handleFocus) => {
 })
 // Feed players from opened matches into autocomplete.
 indexMatchesFrom(queryClient)
+
+// The tray menu is built in Rust; keep its labels in the app's language.
+const labelTray = () => void invoke('tray_labels', { open: i18n.t('tray.open'), quit: i18n.t('tray.quit') }).catch(() => {})
+labelTray()
+i18n.on('languageChanged', labelTray)
 
 const App = () => (
     <QueryClientProvider client={queryClient}>
@@ -55,6 +63,7 @@ const App = () => (
             </HashRouter>
             <Toaster position="bottom-right" />
             <GameSettingsWatcher />
+            <UpdateNotifier />
         </TooltipProvider>
     </QueryClientProvider>
 )
