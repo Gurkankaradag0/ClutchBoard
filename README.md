@@ -16,7 +16,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-0b7cd6?style=flat-square)
 ![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?style=flat-square)
 
-<video src="https://raw.githubusercontent.com/Gurkankaradag0/ClutchBoard/main/docs/media/demo.mp4" controls muted playsinline width="820"></video>
+https://github.com/user-attachments/assets/d259fb73-8e28-433f-ae3d-b3fa6c15df0d
 
 </div>
 
