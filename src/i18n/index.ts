@@ -34,4 +34,9 @@ i18n.on('languageChanged', (lng) => {
 })
 document.documentElement.lang = initial
 
+// Overlay windows share this origin: follow a language change made in another window.
+window.addEventListener('storage', (e) => {
+    if (e.key === KEY && (e.newValue === 'tr' || e.newValue === 'en') && e.newValue !== i18n.language) void i18n.changeLanguage(e.newValue)
+})
+
 export default i18n

@@ -60,6 +60,55 @@ export const useLiveMatch = (enabled: boolean, target?: string) =>
 export const useLiveOf = (puuid: string | undefined, enabled: boolean) =>
     useQuery({ queryKey: ['local', 'live', puuid], queryFn: () => invoke<LiveMatch | null>('local_live_match', { puuid }), enabled: enabled && !!puuid, staleTime: 30_000, refetchOnWindowFocus: true, retry: false, throwOnError: false })
 
+// Chat (Riot Client chat, works without Valorant). Polled only while a friends/chat panel is shown.
+
+/** `state` null = offline. `product` 'mobile' = Riot Mobile (away once the app is closed). `party`: [size, max]. */
+export type Friend = { puuid: string; pid: string; gameName: string; gameTag: string; note: string; state: 'chat' | 'away' | 'dnd' | null; product: string | null; activity: 'lobby' | 'queue' | 'select' | 'game' | null; party: [number, number] | null; queue: string | null }
+/** `time` is epoch ms as a string; `cid` of a direct message is the friend's pid. */
+export type ChatMessage = { id: string; cid: string; puuid: string; body: string; time: string; type: string }
+
+export const useFriends = (poll: boolean) => useQuery({ queryKey: ['local', 'friends'], queryFn: () => invoke<{ me: string; friends: Friend[] } | null>('local_friends'), staleTime: 10_000, refetchInterval: poll ? 10_000 : false, retry: false })
+
+/** `cid` null = every conversation (for unread counts). */
+export const useMessages = (cid: string | null, enabled: boolean) => useQuery({ queryKey: ['local', 'messages', cid ?? 'all'], queryFn: () => invoke<ChatMessage[] | null>('local_messages', { cid }), enabled, refetchInterval: enabled ? 3_000 : false, retry: false })
+
+// Last read message time per conversation. Shared by every window (same origin).
+const SEEN_KEY = 'clutchboard:chat-seen'
+
+const readSeen = (): Record<string, number> => {
+    try {
+        const saved = localStorage.getItem(SEEN_KEY)
+        if (saved) return JSON.parse(saved) as Record<string, number>
+        // First run: older messages count as read.
+        const fresh = { '*': Date.now() }
+        localStorage.setItem(SEEN_KEY, JSON.stringify(fresh))
+        return fresh
+    } catch {
+        return {}
+    }
+}
+
+export const markSeen = (cid: string, time: number) => {
+    const seen = readSeen()
+    if ((seen[cid] ?? 0) >= time) return
+    try {
+        localStorage.setItem(SEEN_KEY, JSON.stringify({ ...seen, [cid]: time }))
+    } catch {
+        // storage unavailable
+    }
+}
+
+/** cid -> messages from the friend newer than the last one read. */
+export const unreadCounts = (messages: ChatMessage[], me: string) => {
+    const seen = readSeen()
+    const out = new Map<string, number>()
+    for (const m of messages) {
+        if (m.puuid === me || Number(m.time) <= (seen[m.cid] ?? seen['*'] ?? 0)) continue
+        out.set(m.cid, (out.get(m.cid) ?? 0) + 1)
+    }
+    return out
+}
+
 // Loadouts
 
 const CHROMA_TYPE = '3ad1b2b2-acdb-4524-852f-954a76ddae0a'
@@ -100,6 +149,9 @@ export const matchLoadouts = (live: LiveMatch) => {
     }
     return out
 }
+
+/** Vandal, Phantom, Operator, Sheriff: shown first per player; the rest on demand. */
+export const FEATURED_WEAPONS = ['9c82e19d-4575-0200-1a81-3eacf00cf872', 'ee8e8d15-496b-07ac-e5f6-8fae5d4c7b1a', 'a03b24d3-4319-996d-0f8c-94bbfba1dfc7', 'e336c6b8-418d-9340-d77f-7a9e4cfe0702']
 
 export const livePlayers = (live: LiveMatch) => live.match.Players ?? live.match.AllyTeam?.Players ?? []
 

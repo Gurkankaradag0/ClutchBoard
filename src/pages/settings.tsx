@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { useRecent } from '@/stores/recent'
 import { useUpdate } from '@/stores/update'
 import { useSeen } from '@/stores/players'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { OverlaySettings } from '@/components/overlay/overlay-settings'
 
 const Section = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
     <section className="grid gap-4 border-b py-6 md:grid-cols-[16rem_1fr]">
@@ -92,84 +94,94 @@ const SettingsPage = () => {
     return (
         <div className="mx-auto max-w-4xl px-8 py-10">
             <h1 className="mb-4 text-3xl font-bold uppercase">{t('settings.title')}</h1>
+            <Tabs defaultValue="general">
+                <TabsList>
+                    <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
+                    <TabsTrigger value="overlay">{t('settings.tabs.overlay')}</TabsTrigger>
+                </TabsList>
+                <TabsContent value="overlay">
+                    <OverlaySettings />
+                </TabsContent>
+                <TabsContent value="general">
+                    <Section title={t('settings.apiKey')} hint={t('settings.apiKeyHint')}>
+                        <p className={cn('text-sm font-medium', status.data ? 'text-win' : 'text-loss')}>{status.data ? t('settings.apiKeySet') : t('settings.apiKeyMissing')}</p>
+                        <form onSubmit={submit} className="flex w-full max-w-md gap-2">
+                            <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="HDEV-xxxxxxxx-…" aria-label={t('settings.apiKey')} autoComplete="off" spellCheck={false} />
+                            <Button type="submit" disabled={!key.trim() || save.isPending}>
+                                {t('settings.save')}
+                            </Button>
+                        </form>
+                    </Section>
 
-            <Section title={t('settings.apiKey')} hint={t('settings.apiKeyHint')}>
-                <p className={cn('text-sm font-medium', status.data ? 'text-win' : 'text-loss')}>{status.data ? t('settings.apiKeySet') : t('settings.apiKeyMissing')}</p>
-                <form onSubmit={submit} className="flex w-full max-w-md gap-2">
-                    <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="HDEV-xxxxxxxx-…" aria-label={t('settings.apiKey')} autoComplete="off" spellCheck={false} />
-                    <Button type="submit" disabled={!key.trim() || save.isPending}>
-                        {t('settings.save')}
-                    </Button>
-                </form>
-            </Section>
+                    <Section title={t('update.title')} hint={version.data ? t('update.current', { v: version.data }) : undefined}>
+                        <p className={cn('text-sm', upd.status === 'error' ? 'text-loss' : upd.status === 'available' ? 'text-gold' : 'text-muted-foreground')} aria-live="polite">
+                            {upd.status === 'checking' && t('update.checking')}
+                            {upd.status === 'latest' && t('update.latest')}
+                            {upd.status === 'available' && t('update.available', { v: upd.update?.version })}
+                            {upd.status === 'downloading' && t('update.downloading', { p: upd.progress === null ? '…' : `${Math.round(upd.progress)}%` })}
+                            {upd.status === 'error' && t('update.error', { message: upd.error })}
+                        </p>
+                        {upd.status === 'available' ? (
+                            <Button onClick={() => void upd.install()}>{t('update.install')}</Button>
+                        ) : (
+                            <Button variant="outline" onClick={() => void upd.check()} disabled={upd.status === 'checking' || upd.status === 'downloading'}>
+                                {t('update.check')}
+                            </Button>
+                        )}
+                    </Section>
 
-            <Section title={t('update.title')} hint={version.data ? t('update.current', { v: version.data }) : undefined}>
-                <p className={cn('text-sm', upd.status === 'error' ? 'text-loss' : upd.status === 'available' ? 'text-gold' : 'text-muted-foreground')} aria-live="polite">
-                    {upd.status === 'checking' && t('update.checking')}
-                    {upd.status === 'latest' && t('update.latest')}
-                    {upd.status === 'available' && t('update.available', { v: upd.update?.version })}
-                    {upd.status === 'downloading' && t('update.downloading', { p: upd.progress === null ? '…' : `${Math.round(upd.progress)}%` })}
-                    {upd.status === 'error' && t('update.error', { message: upd.error })}
-                </p>
-                {upd.status === 'available' ? (
-                    <Button onClick={() => void upd.install()}>{t('update.install')}</Button>
-                ) : (
-                    <Button variant="outline" onClick={() => void upd.check()} disabled={upd.status === 'checking' || upd.status === 'downloading'}>
-                        {t('update.check')}
-                    </Button>
-                )}
-            </Section>
-
-            <Section title={t('settings.startup')}>
-                {(['autostart', 'closeToTray'] as const).map((name) => (
-                    <label key={name} className="flex items-start gap-2 text-sm">
-                        <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={prefs.data?.[name] ?? false} disabled={prefs.isPending || setPref.isPending} onChange={(e) => setPref.mutate({ name, on: e.target.checked })} />
-                        <span>
-                            {t(`settings.${name}`)}
-                            <span className="block text-xs text-muted-foreground">{t(`settings.${name}Hint`)}</span>
-                        </span>
-                    </label>
-                ))}
-            </Section>
-
-            <Section title={t('settings.language')}>
-                <Select value={i18n.language} onValueChange={(v) => void i18n.changeLanguage(v)}>
-                    <SelectTrigger className="w-48" aria-label={t('settings.language')}>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {LANGS.map((l) => (
-                            <SelectItem key={l} value={l}>
-                                {LANG_NAMES[l]}
-                            </SelectItem>
+                    <Section title={t('settings.startup')}>
+                        {(['autostart', 'closeToTray'] as const).map((name) => (
+                            <label key={name} className="flex items-start gap-2 text-sm">
+                                <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={prefs.data?.[name] ?? false} disabled={prefs.isPending || setPref.isPending} onChange={(e) => setPref.mutate({ name, on: e.target.checked })} />
+                                <span>
+                                    {t(`settings.${name}`)}
+                                    <span className="block text-xs text-muted-foreground">{t(`settings.${name}Hint`)}</span>
+                                </span>
+                            </label>
                         ))}
-                    </SelectContent>
-                </Select>
-            </Section>
+                    </Section>
 
-            <Section title={t('settings.cache')} hint={t('settings.cacheHint')}>
-                <p className="text-sm text-muted-foreground">{t('settings.cacheSize', { cache: size(usage.data?.cache), archive: size(usage.data?.archive) })}</p>
-                <Button variant="outline" onClick={() => wipe.mutate()} disabled={wipe.isPending}>
-                    {t('settings.clearCache')} ({size(usage.data?.cache)})
-                </Button>
-            </Section>
+                    <Section title={t('settings.language')}>
+                        <Select value={i18n.language} onValueChange={(v) => void i18n.changeLanguage(v)}>
+                            <SelectTrigger className="w-48" aria-label={t('settings.language')}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {LANGS.map((l) => (
+                                    <SelectItem key={l} value={l}>
+                                        {LANG_NAMES[l]}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </Section>
 
-            <Section title={t('settings.history')} hint={t('settings.historyHint')}>
-                <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" onClick={run(clearOthers)} disabled={!others.length}>
-                        {t('settings.clearOthers', { n: others.length, size: size(usage.data?.groups[0]) })}
-                    </Button>
-                    <Button variant="outline" onClick={run(clearFavorites)} disabled={!favorites.length}>
-                        {t('settings.clearFavorites', { n: favorites.length, size: size(usage.data?.groups[1]) })}
-                    </Button>
-                    <Button variant="destructive" onClick={run(clearAll)} disabled={!entries.length}>
-                        {t('settings.clearAll', { size: size(usage.data?.groups[2]) })}
-                    </Button>
-                </div>
-                <Button variant="outline" onClick={clearSeen} disabled={seenCount === 0}>
-                    {t('settings.clearSeen', { n: seenCount })}
-                </Button>
-            </Section>
+                    <Section title={t('settings.cache')} hint={t('settings.cacheHint')}>
+                        <p className="text-sm text-muted-foreground">{t('settings.cacheSize', { cache: size(usage.data?.cache), archive: size(usage.data?.archive) })}</p>
+                        <Button variant="outline" onClick={() => wipe.mutate()} disabled={wipe.isPending}>
+                            {t('settings.clearCache')} ({size(usage.data?.cache)})
+                        </Button>
+                    </Section>
+
+                    <Section title={t('settings.history')} hint={t('settings.historyHint')}>
+                        <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" onClick={run(clearOthers)} disabled={!others.length}>
+                                {t('settings.clearOthers', { n: others.length, size: size(usage.data?.groups[0]) })}
+                            </Button>
+                            <Button variant="outline" onClick={run(clearFavorites)} disabled={!favorites.length}>
+                                {t('settings.clearFavorites', { n: favorites.length, size: size(usage.data?.groups[1]) })}
+                            </Button>
+                            <Button variant="destructive" onClick={run(clearAll)} disabled={!entries.length}>
+                                {t('settings.clearAll', { size: size(usage.data?.groups[2]) })}
+                            </Button>
+                        </div>
+                        <Button variant="outline" onClick={clearSeen} disabled={seenCount === 0}>
+                            {t('settings.clearSeen', { n: seenCount })}
+                        </Button>
+                    </Section>
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }

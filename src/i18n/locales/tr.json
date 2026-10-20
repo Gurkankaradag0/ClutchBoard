@@ -166,7 +166,11 @@
         "autostart": "Windows açılınca ClutchBoard'u başlat",
         "autostartHint": "Windows'a giriş yapınca arka planda başlar.",
         "closeToTray": "Kapat düğmesi sistem tepsisine küçültsün",
-        "closeToTrayHint": "ClutchBoard saatin yanındaki simgede çalışmaya devam eder; çıkmak için simgeye sağ tıkla. Kapalıysa pencereyi kapatmak uygulamadan çıkar."
+        "closeToTrayHint": "ClutchBoard saatin yanındaki simgede çalışmaya devam eder; çıkmak için simgeye sağ tıkla. Kapalıysa pencereyi kapatmak uygulamadan çıkar.",
+        "tabs": {
+            "general": "Genel",
+            "overlay": "Oyun içi paneller"
+        }
     },
     "errors": {
         "noKey": "HenrikDev API anahtarı ayarlanmamış.",
@@ -465,5 +469,60 @@
     "tray": {
         "open": "ClutchBoard'u aç",
         "quit": "Çıkış"
+    },
+    "overlay": {
+        "intro": "Oyunun üstünde görünen, kısayolla açılıp kapanan paneller. Başlıktan sürükleyip kenarlardan boyutlandırabilir, × ile kapatabilirsin. Paneller tıklansa da oyunun odağını almaz; yalnız mesaj penceresine yazarken odak ona geçer, gönderince ya da Esc'ye basınca oyuna döner.",
+        "fullscreen": "Bu hesapta Valorant Tam ekran modunda. Paneller yalnız Pencereli tam ekranda oyunun üstünde görünür: Valorant → Ayarlar → Görüntü → Ekran modu.",
+        "panels": "Paneller",
+        "opacity": "Opaklık",
+        "toggle": "Göster / gizle",
+        "press": "Bir tuş kombinasyonuna bas…",
+        "none": "Atanmadı",
+        "clear": "Kısayolu kaldır",
+        "needsModifier": "Oyun tuşlarını almasın diye kombinasyonda Ctrl ya da Alt kullan.",
+        "inUse": "Bu kombinasyonu başka bir uygulama kullanıyor.",
+        "close": "Kapat",
+        "safety": "Paneller oyunun üstünde duran ayrı pencerelerdir: Valorant'a hiçbir şey enjekte edilmez, belleği okunmaz. Kısayollar her uygulama gibi Windows'a kaydedilir. Mesajlar Riot Client'ın kendi sohbet bağlantısından, yalnız senin yazdığın ve yalnız arkadaşlarına gönderilir."
+    },
+    "chat": {
+        "friends": "Arkadaşlar",
+        "online": "Çevrimiçi",
+        "offline": "Çevrimdışı",
+        "notRunning": "Riot Client açık değil ya da giriş yapılmamış.",
+        "noFriends": "Arkadaş listen boş.",
+        "notFriend": "Bu oyuncu arkadaş listende değil.",
+        "empty": "Henüz mesaj yok.",
+        "placeholder": "Mesaj yaz…",
+        "send": "Gönder",
+        "sendFailed": "Gönderilemedi: {{message}}",
+        "away": "Uzakta",
+        "activity": {
+            "lobby": "Lobide",
+            "queue": "Sırada",
+            "select": "Seçim ekranında",
+            "game": "Oyunda"
+        },
+        "party": "Grup {{size}}/{{max}}",
+        "lolQueues": {
+            "0": "Özel Oyun",
+            "400": "Sıralı Seçim",
+            "420": "Dereceli Tek/Çift",
+            "430": "Kapalı Seçim",
+            "440": "Dereceli Esnek",
+            "450": "ARAM",
+            "480": "Swiftplay",
+            "490": "Hızlı Oyun",
+            "700": "Clash",
+            "900": "ARURF",
+            "1700": "Arena",
+            "1090": "Normal",
+            "1100": "Dereceli",
+            "1130": "Hyper Roll",
+            "1160": "Double Up"
+        },
+        "career": "Kariyer",
+        "hint": "Çift tık: mesaj · Sağ tık: kariyer",
+        "noValorant": "Bu oyuncunun Valorant profili bulunamadı.",
+        "noMatches": "Son maç yok."
     }
 }

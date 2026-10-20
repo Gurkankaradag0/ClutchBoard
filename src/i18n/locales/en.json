@@ -166,7 +166,11 @@
         "autostart": "Start ClutchBoard with Windows",
         "autostartHint": "Starts in the background when you sign in to Windows.",
         "closeToTray": "Close button minimizes to the tray",
-        "closeToTrayHint": "ClutchBoard keeps running next to the clock; quit it from the tray icon. Off: closing the window quits."
+        "closeToTrayHint": "ClutchBoard keeps running next to the clock; quit it from the tray icon. Off: closing the window quits.",
+        "tabs": {
+            "general": "General",
+            "overlay": "In-game panels"
+        }
     },
     "errors": {
         "noKey": "HenrikDev API key is not set.",
@@ -465,5 +469,60 @@
     "tray": {
         "open": "Open ClutchBoard",
         "quit": "Quit"
+    },
+    "overlay": {
+        "intro": "Panels shown on top of the game, toggled with hotkeys. Drag them by the title bar, resize from the edges, close with ×. Clicking a panel doesn't take focus from the game; only a chat window takes it while you type, and sending or Esc gives it back to the game.",
+        "fullscreen": "Valorant is set to Fullscreen on this account. Panels only show over the game in Windowed Fullscreen: Valorant → Settings → Video → Display Mode.",
+        "panels": "Panels",
+        "opacity": "Opacity",
+        "toggle": "Show / hide",
+        "press": "Press a key combination…",
+        "none": "Not set",
+        "clear": "Remove hotkey",
+        "needsModifier": "Use Ctrl or Alt in the combination so it doesn't take a game key.",
+        "inUse": "That combination is used by another app.",
+        "close": "Close",
+        "safety": "Panels are separate windows drawn over the game: nothing is injected into Valorant and its memory isn't read. Hotkeys are registered with Windows like any app's. Messages go through the Riot Client's own chat connection, only what you type and only to your friends."
+    },
+    "chat": {
+        "friends": "Friends",
+        "online": "Online",
+        "offline": "Offline",
+        "notRunning": "The Riot Client isn't running or isn't signed in.",
+        "noFriends": "Your friends list is empty.",
+        "notFriend": "This player isn't on your friends list.",
+        "empty": "No messages yet.",
+        "placeholder": "Type a message…",
+        "send": "Send",
+        "sendFailed": "Couldn't send: {{message}}",
+        "away": "Away",
+        "activity": {
+            "lobby": "In lobby",
+            "queue": "In queue",
+            "select": "In select",
+            "game": "In game"
+        },
+        "party": "Party {{size}}/{{max}}",
+        "lolQueues": {
+            "0": "Custom Game",
+            "400": "Normal Draft",
+            "420": "Ranked Solo/Duo",
+            "430": "Blind Pick",
+            "440": "Ranked Flex",
+            "450": "ARAM",
+            "480": "Swiftplay",
+            "490": "Quickplay",
+            "700": "Clash",
+            "900": "ARURF",
+            "1700": "Arena",
+            "1090": "Normal",
+            "1100": "Ranked",
+            "1130": "Hyper Roll",
+            "1160": "Double Up"
+        },
+        "career": "Career",
+        "hint": "Double-click: message · Right-click: career",
+        "noValorant": "No Valorant profile found for this player.",
+        "noMatches": "No recent matches."
     }
 }

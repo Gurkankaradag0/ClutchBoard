@@ -2,6 +2,7 @@ mod archive;
 mod game_settings;
 mod henrik;
 mod migrate;
+mod overlay;
 mod riot_local;
 mod startup;
 
@@ -123,6 +124,28 @@ async fn local_name(state: State<'_, RiotLocal>, puuid: String) -> Result<Option
     state.name(&puuid).await
 }
 
+#[tauri::command]
+async fn local_friends(state: State<'_, RiotLocal>) -> Result<Option<Value>, String> {
+    state.friends().await
+}
+
+#[tauri::command]
+async fn local_messages(
+    state: State<'_, RiotLocal>,
+    cid: Option<String>,
+) -> Result<Option<Value>, String> {
+    state.messages(cid.as_deref()).await
+}
+
+#[tauri::command]
+async fn local_send_message(
+    state: State<'_, RiotLocal>,
+    pid: String,
+    message: String,
+) -> Result<(), String> {
+    state.send_message(&pid, &message).await
+}
+
 // ---- Game settings: per-account config folders, signed-in account's cloud settings ----
 
 #[tauri::command]
@@ -228,13 +251,18 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             startup::reveal(app)
         }))
-        .on_window_event(startup::on_window_event)
+        .on_window_event(|window, event| {
+            startup::on_window_event(window, event);
+            overlay::on_window_event(window, event);
+        })
         .setup(|app| {
             #[cfg(desktop)]
             {
                 app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
+                app.handle()
+                    .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
             }
             let cache = app.path().app_cache_dir()?.join("henrik");
             let config = app.path().app_config_dir()?.join("settings.json");
@@ -246,6 +274,12 @@ pub fn run() {
                 app.path().app_config_dir()?.join("startup.json"),
             ));
             app.manage(startup::create_tray(app.handle())?);
+            app.manage(overlay::Overlay::load(
+                app.path().app_config_dir()?.join("overlay.json"),
+            ));
+            overlay::register_all(app.handle());
+            overlay::watch_foreground();
+            overlay::watch_game(app.handle().clone());
             startup::watch_splash(app.handle());
             Ok(())
         })
@@ -258,6 +292,9 @@ pub fn run() {
             local_my_loadout,
             local_live_match,
             local_name,
+            local_friends,
+            local_messages,
+            local_send_message,
             archive_load,
             archive_save,
             forget_players,
@@ -275,7 +312,14 @@ pub fn run() {
             startup::prefs_get,
             startup::prefs_set,
             startup::tray_labels,
-            startup::startup_done
+            startup::startup_done,
+            overlay::overlay_config,
+            overlay::overlay_set_hotkey,
+            overlay::overlay_set_opacity,
+            overlay::overlay_toggle,
+            overlay::overlay_open,
+            overlay::overlay_hide,
+            overlay::overlay_release
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

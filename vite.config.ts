@@ -11,8 +11,8 @@ export default defineConfig({
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     clearScreen: false,
     // Loaded from disk, so the bundle size warning doesn't matter.
-    // splash.html is the startup window (update check before the app opens).
-    build: { chunkSizeWarningLimit: 1500, rollupOptions: { input: ['index.html', 'splash.html'] } },
+    // splash.html: startup window (update check). overlay.html: in-game panels.
+    build: { chunkSizeWarningLimit: 1500, rollupOptions: { input: ['index.html', 'splash.html', 'overlay.html'] } },
     server: {
         port: 1420,
         strictPort: true,

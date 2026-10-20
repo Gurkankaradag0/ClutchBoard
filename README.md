@@ -16,6 +16,8 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-0b7cd6?style=flat-square)
 ![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db?style=flat-square)
 
+<video src="https://raw.githubusercontent.com/Gurkankaradag0/ClutchBoard/main/docs/media/demo.mp4" controls muted playsinline width="820"></video>
+
 </div>
 
 ---
@@ -36,8 +38,11 @@ ClutchBoard, [tracker.gg](https://tracker.gg/valorant) tarzında bir Valorant is
 - **Arama** — son aramalar ve favoriler, açtığın maçlardaki oyunculardan oluşan otomatik tamamlama.
 - **Valorant açıkken** — **Hesabım**: kuşandığın skinler, kart, seviye ve sprey çarkı, oyun içi satın alma menüsü düzeninde. **Canlı Maç**: maçtaki oyuncuların rank'ı, partileri ve skinleri.
 - **Oyun Ayarları** — bu bilgisayarda giriş yapılmış tüm Valorant hesaplarının ayarları tek yerde: nişangah, tuş atamaları (ajana özel profiller dahil), fare, ses ve görüntü. Hesaplar arasında kopyala, ön ayar olarak kaydet, JSON dışa / içe aktar; varsayılan ön ayar bir sonraki giriş yapan hesaba otomatik uygulanır.
+- **Oyun içi paneller** — oyunun üstünde duran ayrı pencereler, kısayolla açılıp kapanır. **Canlı maç** (Ctrl+Shift+L) ve **Arkadaşlar** (Ctrl+Shift+F): arkadaşlar Valorant / League of Legends / TFT / çevrimiçi / çevrimdışı diye gruplanır; kim oyunda, sırada ya da seçim ekranında, hangi modda ve kaç kişilik grupta görünür. Bir arkadaşa tıklayınca ona ayrı bir mesaj penceresi açılır; Enter gönderir ve klavyeyi oyuna geri verir, Esc göndermeden geri döner. Paneller sürüklenip boyutlandırılabilir, yerleri hatırlanır; kısayollar ve opaklık **Ayarlar → Oyun içi paneller**'de. Valorant **Pencereli tam ekran**dayken görünür.
 - **Nişangah editörü** — canlı önizleme, renk seçici, dış çizgi rengi (glow), nişangah kodunu kopyala veya koddan ekle. Mevcut profiller bozulmaz; yeni nişangah boş bir yere eklenip seçilir.
-- **Türkçe / İngilizce**, uygulama içi otomatik güncelleme.
+- **Türkçe / İngilizce**, uygulama içi otomatik güncelleme, kapatınca sistem tepsisinde çalışmaya devam eder.
+
+<p align="center"><img src="docs/media/demo.jpg" alt="Oyunun üstünde arkadaşlar paneli ve mesaj penceresi" width="720"></p>
 
 ### Kurulum
 
@@ -54,7 +59,7 @@ Uygulama her açılışta önce güncellemeleri kontrol eder, varsa kurup öyle 
 
 ### Yerel Riot Client özellikleri hakkında
 
-"Hesabım" ve "Canlı Maç", Riot Client'ın bilgisayarındaki yerel arayüzünü **yalnızca okur** (Riot Client'ın kendi kullandığı uçlar). **Oyun Ayarları** tek istisnadır: yalnız Riot Client'a giriş yapılı hesabın kendi ayarlarını, oyunun ayar menüsünün kullandığı servise yazar ve her değişiklikten önce yedek alır; diğer hesapların görüntü ayarları kendi yerel dosyalarına yazılır. Oyunun belleğine dokunulmaz, oyun içi hiçbir şey otomatikleştirilmez (ajan seçme/kilitleme yok). Gizli isimli oyuncuların adı yalnızca sen istersen, tek tek sorgulanır. Bu özellikleri kullanmak senin sorumluluğundadır.
+"Hesabım" ve "Canlı Maç", Riot Client'ın bilgisayarındaki yerel arayüzünü **yalnızca okur** (Riot Client'ın kendi kullandığı uçlar). İki istisna vardır: **Oyun Ayarları** yalnız Riot Client'a giriş yapılı hesabın kendi ayarlarını, oyunun ayar menüsünün kullandığı servise yazar ve her değişiklikten önce yedek alır (diğer hesapların görüntü ayarları kendi yerel dosyalarına yazılır); **mesaj pencereleri** yalnız senin yazdığın mesajı, yalnız arkadaş listendeki kişiye, Riot Client'ın kendi sohbet bağlantısından gönderir. Oyun içi paneller oyunun üstünde duran ayrı pencerelerdir: oyuna hiçbir şey enjekte edilmez, oyunun belleğine dokunulmaz, oyun içi hiçbir şey otomatikleştirilmez (ajan seçme/kilitleme, otomatik mesaj yok). Gizli isimli oyuncuların adı yalnızca sen istersen, tek tek sorgulanır. Bu özellikleri kullanmak senin sorumluluğundadır.
 
 ### Kaynaktan derleme
 
@@ -94,8 +99,11 @@ ClutchBoard is a [tracker.gg](https://tracker.gg/valorant)-style Valorant stats 
 - **Search** — recent searches, favorites, and autocomplete built from players in matches you've opened.
 - **While Valorant is running** — **My Account**: your equipped skins, card, level and spray wheel in an in-game buy-menu layout. **Live Match**: ranks, parties and skins of the players in your match.
 - **Game Settings** — settings of every Valorant account that has signed in on this PC in one place: crosshair, keybinds (including agent profiles), mouse, audio and video. Copy them between accounts, save presets, export / import JSON; a default preset is applied automatically to the next account that signs in.
+- **In-game panels** — separate windows drawn over the game, toggled with hotkeys. **Live match** (Ctrl+Shift+L) and **Friends** (Ctrl+Shift+F): friends are grouped into Valorant / League of Legends / TFT / online / offline, showing who is in game, in queue or in select, the mode and their party size. Click a friend to open a chat window just for them; Enter sends and hands the keyboard back to the game, Esc goes back without sending. Panels can be dragged and resized and remember where they were; hotkeys and opacity live in **Settings → In-game panels**. They show over Valorant in **Windowed Fullscreen**.
 - **Crosshair editor** — live preview, color picker, outline color (glow), copy a crosshair code or add one. Existing profiles are kept; a new crosshair goes into a free slot and is selected.
-- **Turkish / English**, built-in auto-update.
+- **Turkish / English**, built-in auto-update, keeps running in the system tray when closed.
+
+<p align="center"><img src="docs/media/demo.jpg" alt="Friends panel and a chat window over the game" width="720"></p>
 
 ### Install
 
@@ -112,7 +120,7 @@ The app checks for updates every time it starts and installs them before opening
 
 ### About the local Riot Client features
 
-"My Account" and "Live Match" **only read** the Riot Client's local interface on your machine (the same endpoints the Riot Client itself uses). **Game Settings** is the one exception: it writes only the signed-in account's own settings, to the same service the in-game settings menu uses, and takes a backup before every change; other accounts' video settings go to their own local files. The game's memory is never touched and nothing in game is automated (no agent select/lock). Hidden players' names are only looked up when you ask, one at a time. Use these features at your own discretion.
+"My Account" and "Live Match" **only read** the Riot Client's local interface on your machine (the same endpoints the Riot Client itself uses). There are two exceptions: **Game Settings** writes only the signed-in account's own settings, to the same service the in-game settings menu uses, and takes a backup before every change (other accounts' video settings go to their own local files); **chat windows** send only what you type, only to people on your friends list, through the Riot Client's own chat connection. In-game panels are separate windows drawn over the game: nothing is injected into it, its memory is never touched and nothing in game is automated (no agent select/lock, no automated messages). Hidden players' names are only looked up when you ask, one at a time. Use these features at your own discretion.
 
 ### Build from source
 

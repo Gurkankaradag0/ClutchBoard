@@ -1,6 +1,7 @@
 //! Bridge to the local Riot Client: lockfile -> local entitlements -> pd/glz endpoints.
-//! Read-only except the signed-in player's own settings (player-preferences). Never touches the
-//! game process and has no gameplay endpoints (no agent select/lock).
+//! Read-only except the signed-in player's own settings (player-preferences) and direct messages
+//! the user types to a friend. Never touches the game process and has no gameplay endpoints
+//! (no agent select/lock).
 //! Returns `Ok(None)` when Valorant isn't running and `Err(step + status + body)` on failures.
 
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -599,4 +600,248 @@ impl RiotLocal {
             .and_then(|a| a.first().cloned())
             .filter(|n| n["GameName"].as_str().is_some_and(|g| !g.is_empty())))
     }
+
+    // ---- Chat: friends and direct messages. Needs only the signed-in Riot Client. ----
+
+    fn chat_link() -> Option<(String, String)> {
+        let (port, password) = read_lockfile()?;
+        Some((
+            port,
+            format!("Basic {}", STANDARD.encode(format!("riot:{password}"))),
+        ))
+    }
+
+    /// `{ me, friends: [{ puuid, pid, gameName, gameTag, note, state, product, activity, party }] }`.
+    /// Offline friends have no presence (`state` null). See `presence_summary`.
+    pub async fn friends(&self) -> R<Option<Value>> {
+        let Some((port, basic)) = Self::chat_link() else {
+            return Ok(None);
+        };
+        let Ok(session) = self.local_get(&port, &basic, "/chat/v1/session").await else {
+            return Ok(None);
+        };
+        if session["state"] != "connected" {
+            return Ok(None);
+        }
+        let friends = self.local_get(&port, &basic, "/chat/v4/friends").await?;
+        let presences = self
+            .local_get(&port, &basic, "/chat/v4/presences")
+            .await
+            .unwrap_or(Value::Null);
+        // A friend can have several presences (Riot Client, mobile, a game); show the most telling one.
+        let rank = |p: &Value| match (p["state"].as_str(), p["product"].as_str()) {
+            (Some("mobile"), _) => 0,
+            (_, Some("riot_client")) => 1,
+            (_, Some("ritoplus")) => 2,
+            (_, Some("valorant")) => 4,
+            _ => 3,
+        };
+        let presence = |puuid: &str| {
+            presences["presences"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|p| p["puuid"] == puuid)
+                .max_by_key(|p| rank(p))
+        };
+        let list: Vec<Value> = friends["friends"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|f| {
+                let mut v = f["puuid"]
+                    .as_str()
+                    .and_then(presence)
+                    .map(presence_summary)
+                    .unwrap_or_else(|| json!({ "state": null, "product": null, "activity": null, "party": null, "queue": null }));
+                for (k, from) in [("puuid", "puuid"), ("pid", "pid"), ("gameName", "game_name"), ("gameTag", "game_tag"), ("note", "note")] {
+                    v[k] = f[from].clone();
+                }
+                v
+            })
+            .collect();
+        Ok(Some(json!({ "me": session["puuid"], "friends": list })))
+    }
+
+    /// Signed-in chat session: your puuid and, while Valorant runs, its session loop state
+    /// (`MENUS`, `PREGAME`, `INGAME`) from your own presence. None when signed out.
+    pub async fn chat_session(&self) -> Option<(String, Option<String>)> {
+        let (port, basic) = Self::chat_link()?;
+        let session = self
+            .local_get(&port, &basic, "/chat/v1/session")
+            .await
+            .ok()?;
+        if session["state"] != "connected" {
+            return None;
+        }
+        let me = session["puuid"].as_str()?.to_string();
+        let presences = self
+            .local_get(&port, &basic, "/chat/v4/presences")
+            .await
+            .unwrap_or_default();
+        let state = presences["presences"].as_array().and_then(|list| {
+            let mine = list
+                .iter()
+                .find(|p| p["puuid"] == me.as_str() && p["product"] == "valorant")?;
+            let private = decode_presence_json(&mine["private"]);
+            private
+                .pointer("/matchPresenceData/sessionLoopState")
+                .or(private.get("sessionLoopState"))?
+                .as_str()
+                .map(str::to_string)
+        });
+        Some((me, state))
+    }
+
+    /// Messages of one conversation (a friend's `pid`), or of every conversation.
+    pub async fn messages(&self, cid: Option<&str>) -> R<Option<Value>> {
+        let Some((port, basic)) = Self::chat_link() else {
+            return Ok(None);
+        };
+        let path = match cid {
+            // pids are `<puuid>@<region>.pvp.net`; no escaping needed for those characters.
+            Some(cid)
+                if cid
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || "-@.".contains(c)) =>
+            {
+                format!("/chat/v6/messages?cid={cid}")
+            }
+            Some(_) => return Err("invalid conversation id".into()),
+            None => "/chat/v6/messages".into(),
+        };
+        match self.local_get(&port, &basic, &path).await {
+            Ok(v) => Ok(Some(v["messages"].clone())),
+            // The client closed between the lockfile read and the request.
+            Err(e) if e.contains("error sending request") => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Sends a direct message the user typed. Only to a friend's `pid`, so nothing else
+    /// (parties, match chat) can be written to.
+    pub async fn send_message(&self, pid: &str, message: &str) -> R<()> {
+        let message = message.trim();
+        if message.is_empty() {
+            return Err("empty message".into());
+        }
+        let Some((port, basic)) = Self::chat_link() else {
+            return Err("Riot Client is not running".into());
+        };
+        let friends = self.local_get(&port, &basic, "/chat/v4/friends").await?;
+        if !friends["friends"]
+            .as_array()
+            .is_some_and(|l| l.iter().any(|f| f["pid"] == pid))
+        {
+            return Err("not a friend".into());
+        }
+        let res = self
+            .local
+            .post(format!("https://127.0.0.1:{port}/chat/v6/messages"))
+            .header("Authorization", &basic)
+            .json(&json!({ "cid": pid, "message": message, "type": "chat" }))
+            .send()
+            .await
+            .map_err(|e| format!("send message: {e}"))?;
+        body(res, "send message").await.map(|_| ())
+    }
+}
+
+/// Base64 JSON from a presence; League double-encodes `private` as a JSON string.
+fn decode_presence_json(b64: &Value) -> Value {
+    let v = b64
+        .as_str()
+        .and_then(|s| STANDARD.decode(s).ok())
+        .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+        .unwrap_or(Value::Null);
+    match v.as_str() {
+        Some(s) => serde_json::from_str(s).unwrap_or(Value::Null),
+        None => v,
+    }
+}
+
+/// `{ state, product, activity, party }` from one chat presence.
+/// - `product`: as Riot names it, plus `mobile` (Riot Mobile) and `tft`.
+/// - `state`: chat | away | dnd. Riot Mobile is `product: ritoplus` while the app is open; the
+///   legacy `state: mobile` stays after it's closed (reachable, not online), so that is "away".
+/// - `activity`: lobby | queue | select | game, when the game says so.
+/// - `party`: `[size, max]` when in a party of two or more.
+/// - `queue`: Valorant queue id (`competitive`, `custom`) or `lol:<queueId>`.
+fn presence_summary(p: &Value) -> Value {
+    let mobile = p["state"] == "mobile";
+    let state = if mobile {
+        json!("away")
+    } else {
+        p["state"].clone()
+    };
+    let private = decode_presence_json(&p["private"]);
+    // TFT runs inside the League client; its presence only differs by game mode.
+    let product = match p["product"].as_str() {
+        _ if mobile => json!("mobile"),
+        Some("ritoplus") => json!("mobile"),
+        Some("league_of_legends") if private["gameMode"] == "TFT" => json!("tft"),
+        _ => p["product"].clone(),
+    };
+    let packed = decode_presence_json(&p["packedData"]);
+    let activity = match p["product"].as_str() {
+        Some("valorant") => {
+            let loop_state = private
+                .pointer("/matchPresenceData/sessionLoopState")
+                .or(private.get("sessionLoopState"));
+            let party_state = private
+                .pointer("/partyPresenceData/partyState")
+                .or(private.get("partyState"));
+            match (
+                loop_state.and_then(Value::as_str),
+                party_state.and_then(Value::as_str),
+            ) {
+                (Some("INGAME"), _) => Some("game"),
+                (Some("PREGAME"), _) => Some("select"),
+                (_, Some("MATCHMAKING")) => Some("queue"),
+                (Some("MENUS"), _) => Some("lobby"),
+                _ => None,
+            }
+        }
+        _ => match private["gameStatus"].as_str() {
+            Some("inGame") => Some("game"),
+            Some("championSelect") => Some("select"),
+            Some("inQueue") => Some("queue"),
+            Some("outOfGame" | "hosting_NORMAL" | "hosting_RANKED_SOLO_5x5") => Some("lobby"),
+            _ => None,
+        },
+    };
+    let num = |v: Option<&Value>| v.and_then(|v| v.as_u64().or_else(|| v.as_str()?.parse().ok()));
+    let size = num(packed.pointer("/party/currentSize"))
+        .or_else(|| num(private.pointer("/partyPresenceData/partySize")))
+        .or_else(|| num(private.get("partySize")));
+    let max = num(packed.pointer("/party/maxSize"))
+        .or_else(|| num(private.pointer("/partyPresenceData/maxPartySize")))
+        .or_else(|| num(private.get("maxPartySize")));
+    let party = match (size, max) {
+        (Some(s), Some(m)) if s > 1 => json!([s, m]),
+        _ => Value::Null,
+    };
+    // Valorant: queue id ("competitive"), custom games by provisioning flow.
+    // League / TFT: numeric queue id, prefixed so the UI can tell them apart.
+    let queue = match p["product"].as_str() {
+        Some("valorant") => {
+            let flow = private
+                .pointer("/matchPresenceData/provisioningFlow")
+                .or(private.get("provisioningFlow"));
+            let id = private
+                .pointer("/matchPresenceData/queueId")
+                .or(private.get("queueId"))
+                .and_then(Value::as_str)
+                .filter(|q| !q.is_empty());
+            match flow.and_then(Value::as_str) {
+                Some("CustomGame") => Some("custom".to_string()),
+                _ => id.map(str::to_string),
+            }
+        }
+        Some("league_of_legends") => num(private.get("queueId"))
+            .filter(|q| *q > 0)
+            .map(|q| format!("lol:{q}")),
+        _ => None,
+    };
+    json!({ "state": state, "product": product, "activity": activity, "party": party, "queue": queue })
 }

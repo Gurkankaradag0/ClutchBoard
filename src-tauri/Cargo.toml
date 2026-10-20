@@ -1,6 +1,6 @@
 [package]
 name = "clutchboard"
-version = "0.5.1"
+version = "0.6.0"
 description = "Valorant stats desktop app"
 authors = ["Gürkan Karadağ"]
 edition = "2021"
@@ -40,3 +40,4 @@ strip = true
 tauri-plugin-process = "2.4.0"
 tauri-plugin-updater = "2.13.1"
 tauri-plugin-single-instance = "2"
+tauri-plugin-global-shortcut = "2"

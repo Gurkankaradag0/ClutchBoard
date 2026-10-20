@@ -13,13 +13,10 @@ import { LoadoutView } from '@/components/local/loadout-view'
 import { profilePath } from '@/components/search/riot-id-search'
 import { fetchMmr } from '@/lib/api'
 import { img } from '@/lib/assets'
-import { henrikRegion, liveParties, livePlayers, matchLoadouts, resolveSkin, revealName, useLiveMatch, useLocalStatus, useSkinIndex, type LivePlayer, type PlayerLoadout, type RevealedName, type SkinIndex } from '@/lib/local'
+import { FEATURED_WEAPONS, henrikRegion, liveParties, livePlayers, matchLoadouts, resolveSkin, revealName, useLiveMatch, useLocalStatus, useSkinIndex, type LivePlayer, type PlayerLoadout, type RevealedName, type SkinIndex } from '@/lib/local'
 import type { Party } from '@/lib/stats'
 import { cn } from '@/lib/utils'
 import { LocalError, NotRunning } from './me'
-
-// Featured weapons per row; the rest are in the "All" dialog.
-const FEATURED = ['9c82e19d-4575-0200-1a81-3eacf00cf872', 'ee8e8d15-496b-07ac-e5f6-8fae5d4c7b1a', 'a03b24d3-4319-996d-0f8c-94bbfba1dfc7', 'e336c6b8-418d-9340-d77f-7a9e4cfe0702']
 
 /** undefined: not asked, 'pending': looking up, { failed }: not found */
 type Reveal = RevealedName | { failed: string[] } | 'pending' | undefined
@@ -85,7 +82,7 @@ const PlayerName = ({ p, me, name, reveal, onReveal }: Pick<RowProps, 'p' | 'me'
 const PlayerRow = (props: RowProps) => {
     const { t } = useTranslation()
     const { p, me, party, tier, tierName, loadout, index } = props
-    const featured = FEATURED.map((id) => loadout?.guns.find((g) => g.weaponId === id)).filter((g) => !!g)
+    const featured = FEATURED_WEAPONS.map((id) => loadout?.guns.find((g) => g.weaponId === id)).filter((g) => !!g)
     const identity = p.PlayerIdentity ?? {}
     return (
         <li className={cn('flex items-center gap-4 rounded-md bg-card px-4 py-2.5', me && 'bg-accent')} style={party ? { boxShadow: `inset 4px 0 0 var(--party-${party.color})` } : undefined} title={party ? t('match.party', { n: party.size }) : undefined}>

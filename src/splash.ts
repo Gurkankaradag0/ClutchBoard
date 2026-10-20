@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
+import '@/lib/context-menu'
 
 // Startup window: installs a pending update before the app opens, like Discord's updater.
 // Any failure (offline, timeout, bad download) just opens the app.
